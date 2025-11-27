@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Users, Clock, Palmtree, AlertTriangle, Plus, Search, Eye, Pencil, Trash2, Check, X, ChevronDown } from "lucide-react";
+import { Users, Clock, Palmtree, AlertTriangle, Plus, Search, Eye, Pencil, Trash2, Check, X, ChevronDown, Award } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import type { Employee, HoursBank, VacationPeriod, LeavePeriod } from "@shared/schema";
+import type { Employee, HoursBank, VacationPeriod, LeavePeriod, PaidDayOff } from "@shared/schema";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -120,6 +120,7 @@ export default function Dashboard() {
   const [expandedSections, setExpandedSections] = useState({
     onVacation: true,
     upcomingVacations: true,
+    paidDaysOff: true,
     employees: true
   });
   const { toast } = useToast();
@@ -142,6 +143,10 @@ export default function Dashboard() {
 
   const { data: leaves = [] } = useQuery<LeavePeriod[]>({
     queryKey: ["/api/leaves"],
+  });
+
+  const { data: paidDaysOff = [] } = useQuery<PaidDayOff[]>({
+    queryKey: ["/api/paid-days-off"],
   });
 
   const deleteMutation = useMutation({
@@ -254,6 +259,39 @@ export default function Dashboard() {
       employee.position.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Paid days off logic
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const sevenDaysLater = new Date(today);
+  sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+
+  const paidDaysOffToday = paidDaysOff
+    .filter(p => {
+      const paidDate = new Date(p.date);
+      paidDate.setHours(0, 0, 0, 0);
+      return paidDate.getTime() === today.getTime();
+    })
+    .map(p => ({ ...p, employee: employees.find(e => e.id === p.employeeId) }))
+    .filter(p => p.employee)
+    .sort((a, b) => a.employee!.fullName.localeCompare(b.employee!.fullName));
+
+  const paidDaysOffNext7Days = paidDaysOff
+    .filter(p => {
+      const paidDate = new Date(p.date);
+      paidDate.setHours(0, 0, 0, 0);
+      return paidDate > today && paidDate <= sevenDaysLater;
+    })
+    .map(p => ({ ...p, employee: employees.find(e => e.id === p.employeeId) }))
+    .filter(p => p.employee)
+    .sort((a, b) => {
+      const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
+      if (dateCompare !== 0) return dateCompare;
+      return a.employee!.fullName.localeCompare(b.employee!.fullName);
+    });
+
+  const totalPaidDaysOffToday = paidDaysOffToday.length;
+  const totalPaidDaysOffNext7Days = paidDaysOffNext7Days.length;
+
   const isLoading = loadingEmployees || loadingHours || loadingVacations;
 
   return (
@@ -313,6 +351,109 @@ export default function Dashboard() {
           </>
         )}
       </div>
+
+      {(totalPaidDaysOffToday > 0 || totalPaidDaysOffNext7Days > 0) && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle>Folgas Abonadas</CardTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => toggleSection("paidDaysOff")}
+                data-testid="button-toggle-paid-days-off"
+                className="h-6 w-6"
+              >
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${expandedSections.paidDaysOff ? "" : "-rotate-90"}`}
+                />
+              </Button>
+            </div>
+          </CardHeader>
+          {expandedSections.paidDaysOff ? (
+            <CardContent>
+              <div className="space-y-6">
+                {totalPaidDaysOffToday > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <Award className="h-4 w-4" />
+                      Hoje
+                    </h3>
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Funcionário</TableHead>
+                            <TableHead>Matrícula</TableHead>
+                            <TableHead className="text-center">Horas</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paidDaysOffToday.map((p) => (
+                            <TableRow key={p.id} data-testid={`row-paid-day-off-today-${p.id}`}>
+                              <TableCell>
+                                <Link href={`/employees/${p.employeeId}`}>
+                                  <p className="font-medium text-primary hover:underline cursor-pointer">{p.employee?.fullName}</p>
+                                </Link>
+                              </TableCell>
+                              <TableCell>{p.employee?.registrationNumber}</TableCell>
+                              <TableCell className="text-center">
+                                <Badge>{minutesToHHMM(p.hours)}</Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+                {totalPaidDaysOffNext7Days > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <Award className="h-4 w-4" />
+                      Próximos 7 Dias
+                    </h3>
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Data</TableHead>
+                            <TableHead>Funcionário</TableHead>
+                            <TableHead>Matrícula</TableHead>
+                            <TableHead className="text-center">Horas</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paidDaysOffNext7Days.map((p) => (
+                            <TableRow key={p.id} data-testid={`row-paid-day-off-next7-${p.id}`}>
+                              <TableCell className="font-medium">{formatDate(p.date)}</TableCell>
+                              <TableCell>
+                                <Link href={`/employees/${p.employeeId}`}>
+                                  <p className="font-medium text-primary hover:underline cursor-pointer">{p.employee?.fullName}</p>
+                                </Link>
+                              </TableCell>
+                              <TableCell>{p.employee?.registrationNumber}</TableCell>
+                              <TableCell className="text-center">
+                                <Badge>{minutesToHHMM(p.hours)}</Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          ) : (
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                {totalPaidDaysOffToday} hoje, {totalPaidDaysOffNext7Days} próximos 7 dias
+              </p>
+            </CardContent>
+          )}
+        </Card>
+      )}
 
       {employeesOnVacation.length > 0 && (
         <Card>
