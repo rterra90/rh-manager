@@ -727,6 +727,14 @@ export default function EmployeeDetail() {
   const employeePaidDaysOff = paidDaysOff.filter((d) => d.employeeId === employee.id);
   const totalHours = employeeHours.reduce((sum, h) => sum + h.hours, 0);
 
+  const [initialHoursByYear, setInitialHoursByYear] = useState<Record<number, string>>({});
+
+  const currentYear = new Date().getFullYear();
+  const currentYearDaysOff = employeePaidDaysOff.filter(d => d.year === currentYear);
+  const usedHoursCurrentYear = currentYearDaysOff.reduce((sum, d) => sum + d.hours, 0);
+  const initialHoursCurrentYear = initialHoursByYear[currentYear] ? hhmmToMinutes(initialHoursByYear[currentYear]) : 0;
+  const balancePaidDaysOffCurrentYear = initialHoursCurrentYear - usedHoursCurrentYear;
+
   const handleSaveObservations = () => {
     updateObservationsMutation.mutate(currentObservations);
   };
@@ -783,6 +791,18 @@ export default function EmployeeDetail() {
                 {minutesToHHMM(totalHours)}
               </Badge>
             </div>
+            {initialHoursCurrentYear > 0 && (
+              <div>
+                <p className="text-sm text-muted-foreground">Saldo Folgas Abonadas ({currentYear})</p>
+                <Badge
+                  variant={balancePaidDaysOffCurrentYear < 0 ? "destructive" : balancePaidDaysOffCurrentYear > 0 ? "default" : "secondary"}
+                  className="mt-1"
+                >
+                  {balancePaidDaysOffCurrentYear > 0 ? "+" : ""}
+                  {minutesToHHMM(balancePaidDaysOffCurrentYear)}
+                </Badge>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -1118,12 +1138,35 @@ export default function EmployeeDetail() {
                           .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
                         
                         const totalYearHours = yearDaysOff.reduce((sum, d) => sum + d.hours, 0);
+                        const initialHours = initialHoursByYear[year] ? hhmmToMinutes(initialHoursByYear[year]) : 0;
+                        const balance = initialHours - totalYearHours;
 
                         return (
                           <div key={year} className="space-y-4 p-4 border rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-semibold text-lg">{year}</h4>
-                              <Badge variant="outline">{minutesToHHMM(totalYearHours)}</Badge>
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-lg mb-3">{year}</h4>
+                                <div className="space-y-3">
+                                  <div className="flex items-center gap-2">
+                                    <Label htmlFor={`initial-hours-${year}`} className="text-sm text-muted-foreground min-w-max">Horas Iniciais:</Label>
+                                    <Input
+                                      id={`initial-hours-${year}`}
+                                      type="text"
+                                      placeholder="Ex: 40:00"
+                                      value={initialHoursByYear[year] || ""}
+                                      onChange={(e) => setInitialHoursByYear(prev => ({ ...prev, [year]: e.target.value }))}
+                                      className="h-8 w-24"
+                                      data-testid={`input-initial-hours-${year}`}
+                                    />
+                                  </div>
+                                  <div className="text-sm space-y-1">
+                                    <p><span className="text-muted-foreground">Utilizado:</span> <span className="font-medium">{minutesToHHMM(totalYearHours)}</span></p>
+                                    {initialHours > 0 && (
+                                      <p><span className="text-muted-foreground">Saldo:</span> <Badge variant={balance < 0 ? "destructive" : balance > 0 ? "default" : "secondary"}>{balance > 0 ? "+" : ""}{minutesToHHMM(balance)}</Badge></p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                             {yearDaysOff.length > 0 && (
                               <div className="rounded-md border">

@@ -64,6 +64,26 @@ export class MemStorage implements IStorage {
     this.vacations = new Map();
     this.leaves = new Map();
     this.paidDaysOff = new Map();
+    this.initializeSampleData();
+  }
+
+  private initializeSampleData() {
+    // Sample paid days off for demonstration
+    const sampleDaysOff: PaidDayOff[] = [
+      // 2023
+      { id: randomUUID(), employeeId: "sample-1", date: "2023-02-15", hours: 480, year: 2023, initialHours: null },
+      { id: randomUUID(), employeeId: "sample-1", date: "2023-05-22", hours: 240, year: 2023, initialHours: null },
+      { id: randomUUID(), employeeId: "sample-1", date: "2023-09-10", hours: 360, year: 2023, initialHours: null },
+      // 2024
+      { id: randomUUID(), employeeId: "sample-1", date: "2024-01-18", hours: 480, year: 2024, initialHours: 2400 },
+      { id: randomUUID(), employeeId: "sample-1", date: "2024-03-25", hours: 240, year: 2024, initialHours: 2400 },
+      { id: randomUUID(), employeeId: "sample-1", date: "2024-06-14", hours: 360, year: 2024, initialHours: 2400 },
+      { id: randomUUID(), employeeId: "sample-1", date: "2024-08-30", hours: 480, year: 2024, initialHours: 2400 },
+    ];
+    
+    for (const dayOff of sampleDaysOff) {
+      this.paidDaysOff.set(dayOff.id, dayOff);
+    }
   }
 
   async getUser(id: string): Promise<User | undefined> {
