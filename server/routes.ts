@@ -1,16 +1,275 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import {
+  insertEmployeeSchema,
+  insertHoursBankSchema,
+  insertVacationSchema,
+  insertLeaveSchema,
+} from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
+  app.get("/api/employees", async (_req: Request, res: Response) => {
+    try {
+      const employees = await storage.getAllEmployees();
+      res.json(employees);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar funcionários" });
+    }
+  });
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+  app.get("/api/employees/:id", async (req: Request, res: Response) => {
+    try {
+      const employee = await storage.getEmployee(req.params.id);
+      if (!employee) {
+        return res.status(404).json({ message: "Funcionário não encontrado" });
+      }
+      res.json(employee);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar funcionário" });
+    }
+  });
+
+  app.post("/api/employees", async (req: Request, res: Response) => {
+    try {
+      const parsed = insertEmployeeSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Dados inválidos",
+          errors: parsed.error.flatten(),
+        });
+      }
+
+      const existing = await storage.getEmployeeByRegistration(parsed.data.registrationNumber);
+      if (existing) {
+        return res.status(400).json({ message: "Matrícula já cadastrada" });
+      }
+
+      const employee = await storage.createEmployee(parsed.data);
+      res.status(201).json(employee);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao criar funcionário" });
+    }
+  });
+
+  app.patch("/api/employees/:id", async (req: Request, res: Response) => {
+    try {
+      const existingEmployee = await storage.getEmployee(req.params.id);
+      if (!existingEmployee) {
+        return res.status(404).json({ message: "Funcionário não encontrado" });
+      }
+
+      if (req.body.registrationNumber && req.body.registrationNumber !== existingEmployee.registrationNumber) {
+        const existingRegistration = await storage.getEmployeeByRegistration(req.body.registrationNumber);
+        if (existingRegistration) {
+          return res.status(400).json({ message: "Matrícula já cadastrada" });
+        }
+      }
+
+      const employee = await storage.updateEmployee(req.params.id, req.body);
+      if (!employee) {
+        return res.status(404).json({ message: "Funcionário não encontrado" });
+      }
+      res.json(employee);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao atualizar funcionário" });
+    }
+  });
+
+  app.delete("/api/employees/:id", async (req: Request, res: Response) => {
+    try {
+      const deleted = await storage.deleteEmployee(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Funcionário não encontrado" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao remover funcionário" });
+    }
+  });
+
+  app.get("/api/hours-bank", async (_req: Request, res: Response) => {
+    try {
+      const entries = await storage.getAllHoursBank();
+      res.json(entries);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar banco de horas" });
+    }
+  });
+
+  app.get("/api/hours-bank/employee/:employeeId", async (req: Request, res: Response) => {
+    try {
+      const entries = await storage.getHoursBankByEmployee(req.params.employeeId);
+      res.json(entries);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar banco de horas" });
+    }
+  });
+
+  app.post("/api/hours-bank", async (req: Request, res: Response) => {
+    try {
+      const parsed = insertHoursBankSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Dados inválidos",
+          errors: parsed.error.flatten(),
+        });
+      }
+
+      const employee = await storage.getEmployee(parsed.data.employeeId);
+      if (!employee) {
+        return res.status(400).json({ message: "Funcionário não encontrado" });
+      }
+
+      const entry = await storage.createHoursBank(parsed.data);
+      res.status(201).json(entry);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao criar lançamento" });
+    }
+  });
+
+  app.delete("/api/hours-bank/:id", async (req: Request, res: Response) => {
+    try {
+      const deleted = await storage.deleteHoursBank(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Lançamento não encontrado" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao remover lançamento" });
+    }
+  });
+
+  app.get("/api/vacations", async (_req: Request, res: Response) => {
+    try {
+      const vacations = await storage.getAllVacations();
+      res.json(vacations);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar férias" });
+    }
+  });
+
+  app.get("/api/vacations/employee/:employeeId", async (req: Request, res: Response) => {
+    try {
+      const vacations = await storage.getVacationsByEmployee(req.params.employeeId);
+      res.json(vacations);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar férias" });
+    }
+  });
+
+  app.post("/api/vacations", async (req: Request, res: Response) => {
+    try {
+      const parsed = insertVacationSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Dados inválidos",
+          errors: parsed.error.flatten(),
+        });
+      }
+
+      const employee = await storage.getEmployee(parsed.data.employeeId);
+      if (!employee) {
+        return res.status(400).json({ message: "Funcionário não encontrado" });
+      }
+
+      const vacation = await storage.createVacation(parsed.data);
+      res.status(201).json(vacation);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao criar período de férias" });
+    }
+  });
+
+  app.patch("/api/vacations/:id", async (req: Request, res: Response) => {
+    try {
+      const vacation = await storage.updateVacation(req.params.id, req.body);
+      if (!vacation) {
+        return res.status(404).json({ message: "Período de férias não encontrado" });
+      }
+      res.json(vacation);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao atualizar período de férias" });
+    }
+  });
+
+  app.delete("/api/vacations/:id", async (req: Request, res: Response) => {
+    try {
+      const deleted = await storage.deleteVacation(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Período de férias não encontrado" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao remover período de férias" });
+    }
+  });
+
+  app.get("/api/leaves", async (_req: Request, res: Response) => {
+    try {
+      const leaves = await storage.getAllLeaves();
+      res.json(leaves);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar licenças" });
+    }
+  });
+
+  app.get("/api/leaves/employee/:employeeId", async (req: Request, res: Response) => {
+    try {
+      const leaves = await storage.getLeavesByEmployee(req.params.employeeId);
+      res.json(leaves);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar licenças" });
+    }
+  });
+
+  app.post("/api/leaves", async (req: Request, res: Response) => {
+    try {
+      const parsed = insertLeaveSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Dados inválidos",
+          errors: parsed.error.flatten(),
+        });
+      }
+
+      const employee = await storage.getEmployee(parsed.data.employeeId);
+      if (!employee) {
+        return res.status(400).json({ message: "Funcionário não encontrado" });
+      }
+
+      const leave = await storage.createLeave(parsed.data);
+      res.status(201).json(leave);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao criar período de licença" });
+    }
+  });
+
+  app.patch("/api/leaves/:id", async (req: Request, res: Response) => {
+    try {
+      const leave = await storage.updateLeave(req.params.id, req.body);
+      if (!leave) {
+        return res.status(404).json({ message: "Período de licença não encontrado" });
+      }
+      res.json(leave);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao atualizar período de licença" });
+    }
+  });
+
+  app.delete("/api/leaves/:id", async (req: Request, res: Response) => {
+    try {
+      const deleted = await storage.deleteLeave(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Período de licença não encontrado" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao remover período de licença" });
+    }
+  });
 
   return httpServer;
 }
