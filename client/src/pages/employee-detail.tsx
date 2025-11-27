@@ -1,6 +1,7 @@
 import { useRoute, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -615,6 +616,7 @@ export default function EmployeeDetail() {
   // All state and memoized values MUST be declared before any conditional returns
   const [observations, setObservations] = useState<string | null>(null);
   const [initialHoursByYear, setInitialHoursByYear] = useState<Record<number, string>>({});
+  const [yearCarouselIndex, setYearCarouselIndex] = useState(0);
 
   const deleteHoursMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -722,6 +724,23 @@ export default function EmployeeDetail() {
   const usedHoursCurrentYear = useMemo(() => currentYearDaysOff.reduce((sum, d) => sum + d.hours, 0), [currentYearDaysOff]);
   const initialHoursCurrentYear = useMemo(() => initialHoursByYear[currentYear] ? hhmmToMinutes(initialHoursByYear[currentYear]) : 0, [initialHoursByYear, currentYear]);
   const balancePaidDaysOffCurrentYear = useMemo(() => initialHoursCurrentYear - usedHoursCurrentYear, [initialHoursCurrentYear, usedHoursCurrentYear]);
+
+  // Year carousel logic
+  const yearsList = useMemo(() => {
+    if (employeePaidDaysOff.length === 0) return [];
+    const years = employeePaidDaysOff.map(d => d.year);
+    const minYear = Math.min(...years);
+    const maxYear = Math.max(...years);
+    return Array.from({ length: maxYear - minYear + 1 }, (_, i) => minYear + i);
+  }, [employeePaidDaysOff]);
+
+  // Initialize carousel to current year
+  useEffect(() => {
+    if (yearsList.length > 0) {
+      const currentYearIndex = yearsList.indexOf(currentYear);
+      setYearCarouselIndex(currentYearIndex >= 0 ? currentYearIndex : 0);
+    }
+  }, [yearsList, currentYear]);
 
   if (loadingEmployee) {
     return <EmployeeDetailSkeleton />;
@@ -1131,14 +1150,10 @@ export default function EmployeeDetail() {
                         Nenhuma folga abonada registrada
                       </p>
                     </div>
-                  ) : (
+                  ) : yearsList.length <= 1 ? (
+                    // Single year - show without carousel
                     <div className="space-y-6">
-                      {(() => {
-                        const years = employeePaidDaysOff.map(d => d.year);
-                        const minYear = years.length > 0 ? Math.min(...years) : new Date().getFullYear();
-                        const maxYear = years.length > 0 ? Math.max(...years) : new Date().getFullYear();
-                        return Array.from({ length: maxYear - minYear + 1 }, (_, i) => minYear + i);
-                      })().map((year) => {
+                      {yearsList.map((year) => {
                         const yearDaysOff = employeePaidDaysOff
                           .filter(d => d.year === year)
                           .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -1233,6 +1248,135 @@ export default function EmployeeDetail() {
                           </div>
                         );
                       })}
+                    </div>
+                  ) : (
+                    // Multiple years - show as carousel
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setYearCarouselIndex(prev => prev > 0 ? prev - 1 : yearsList.length - 1)}
+                          data-testid="button-prev-year"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <div className="flex-1 overflow-hidden">
+                          <div className="transition-transform duration-300" style={{ transform: `translateX(-${yearCarouselIndex * 100}%)` }}>
+                            <div className="flex gap-6">
+                              {yearsList.map((year) => {
+                                const yearDaysOff = employeePaidDaysOff
+                                  .filter(d => d.year === year)
+                                  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                                
+                                const totalYearHours = yearDaysOff.reduce((sum, d) => sum + d.hours, 0);
+                                const initialHours = initialHoursByYear[year] ? hhmmToMinutes(initialHoursByYear[year]) : 0;
+                                const balance = initialHours - totalYearHours;
+
+                                return (
+                                  <div key={year} className="w-full flex-shrink-0 space-y-4 p-4 border rounded-lg min-h-[350px]">
+                                    <h4 className="font-semibold text-lg">{year}</h4>
+                                    <div className="space-y-3">
+                                      <div className="flex items-center gap-2">
+                                        <Label htmlFor={`initial-hours-${year}`} className="text-sm text-muted-foreground min-w-max">Horas Iniciais:</Label>
+                                        <Input
+                                          id={`initial-hours-${year}`}
+                                          type="text"
+                                          placeholder="Ex: 40:00"
+                                          value={initialHoursByYear[year] || ""}
+                                          onChange={(e) => setInitialHoursByYear(prev => ({ ...prev, [year]: e.target.value }))}
+                                          className="h-8 w-24"
+                                          data-testid={`input-initial-hours-${year}`}
+                                        />
+                                      </div>
+                                      <div className="text-sm space-y-1">
+                                        <p><span className="text-muted-foreground">Utilizado:</span> <span className="font-medium">{minutesToHHMM(totalYearHours)}</span></p>
+                                        {initialHours > 0 && (
+                                          <p><span className="text-muted-foreground">Saldo:</span> <Badge variant={balance < 0 ? "destructive" : balance > 0 ? "default" : "secondary"}>{balance > 0 ? "+" : ""}{minutesToHHMM(balance)}</Badge></p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {yearDaysOff.length > 0 && (
+                                      <div className="rounded-md border">
+                                        <Table>
+                                          <TableHeader>
+                                            <TableRow>
+                                              <TableHead>Data</TableHead>
+                                              <TableHead className="text-center">Horas</TableHead>
+                                              <TableHead className="w-12"></TableHead>
+                                            </TableRow>
+                                          </TableHeader>
+                                          <TableBody>
+                                            {yearDaysOff.map((dayOff) => (
+                                              <TableRow key={dayOff.id} data-testid={`row-paid-day-off-${dayOff.id}`}>
+                                                <TableCell>
+                                                  {formatDate(dayOff.date)}
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                  <Badge variant="default">{minutesToHHMM(dayOff.hours)}</Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                  <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                      <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="text-destructive hover:text-destructive"
+                                                        data-testid={`button-delete-paid-day-off-${dayOff.id}`}
+                                                      >
+                                                        <Trash2 className="h-4 w-4" />
+                                                      </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                      <AlertDialogHeader>
+                                                        <AlertDialogTitle>Remover Folga Abonada</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                          Deseja remover esta folga abonada de {minutesToHHMM(dayOff.hours)} em {formatDate(dayOff.date)}?
+                                                        </AlertDialogDescription>
+                                                      </AlertDialogHeader>
+                                                      <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                        <AlertDialogAction
+                                                          onClick={() => deletePaidDayOffMutation.mutate(dayOff.id)}
+                                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                        >
+                                                          Remover
+                                                        </AlertDialogAction>
+                                                      </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                  </AlertDialog>
+                                                </TableCell>
+                                              </TableRow>
+                                            ))}
+                                          </TableBody>
+                                        </Table>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setYearCarouselIndex(prev => prev < yearsList.length - 1 ? prev + 1 : 0)}
+                          data-testid="button-next-year"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="flex justify-center gap-2">
+                        {yearsList.map((year, idx) => (
+                          <button
+                            key={year}
+                            onClick={() => setYearCarouselIndex(idx)}
+                            className={`h-2 rounded-full transition-all ${idx === yearCarouselIndex ? 'w-8 bg-foreground' : 'w-2 bg-muted-foreground/50'}`}
+                            data-testid={`button-year-indicator-${year}`}
+                          />
+                        ))}
+                      </div>
                     </div>
                   )}
                 </CardContent>
