@@ -345,9 +345,18 @@ interface PeriodFormProps {
 function PeriodForm({ employeeId, type, onSuccess }: PeriodFormProps) {
   const [open, setOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [periodDays, setPeriodDays] = useState("15");
   const [notes, setNotes] = useState("");
   const { toast } = useToast();
+
+  const calculateEndDate = (start: string, days: number): string => {
+    if (!start) return "";
+    const date = new Date(start);
+    date.setDate(date.getDate() + days - 1);
+    return date.toISOString().split('T')[0];
+  };
+
+  const endDate = calculateEndDate(startDate, parseInt(periodDays));
 
   const endpoint = type === "vacation" ? "/api/vacations" : "/api/leaves";
   const title = type === "vacation" ? "Férias" : "Licença-Prêmio";
@@ -365,7 +374,7 @@ function PeriodForm({ employeeId, type, onSuccess }: PeriodFormProps) {
       });
       setOpen(false);
       setStartDate("");
-      setEndDate("");
+      setPeriodDays("15");
       setNotes("");
       onSuccess();
     },
@@ -418,17 +427,23 @@ function PeriodForm({ employeeId, type, onSuccess }: PeriodFormProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="endDate">Data Fim</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                required
-                data-testid="input-end-date"
-              />
+              <Label htmlFor="periodDays">Período</Label>
+              <Select value={periodDays} onValueChange={setPeriodDays}>
+                <SelectTrigger data-testid="select-period-days">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="15">15 dias</SelectItem>
+                  <SelectItem value="30">30 dias</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
+          {startDate && (
+            <div className="p-3 bg-muted rounded-md text-sm">
+              <p className="text-muted-foreground">Data fim: <span className="font-medium text-foreground">{formatDate(endDate)}</span></p>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="notes">Observações (opcional)</Label>
             <Textarea

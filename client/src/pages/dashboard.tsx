@@ -321,6 +321,9 @@ export default function Dashboard() {
                     <p className="text-sm text-muted-foreground">
                       {periods.map(p => p.type === "vacation" ? "Férias" : "Licença-Prêmio").join(" + ")}
                     </p>
+                    <p className="text-sm text-muted-foreground">
+                      Término: <span className="font-medium">{formatDate(periods[0].endDate)}</span>
+                    </p>
                   </div>
                   <div className="flex gap-2">
                     {periods.map((p) => (
