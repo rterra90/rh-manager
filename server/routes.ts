@@ -6,6 +6,7 @@ import {
   insertHoursBankSchema,
   insertVacationSchema,
   insertLeaveSchema,
+  insertPaidDayOffSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(
@@ -268,6 +269,58 @@ export async function registerRoutes(
       res.status(200).json({ success: true, message: "Período de licença removido" });
     } catch (error) {
       res.status(500).json({ message: "Erro ao remover período de licença" });
+    }
+  });
+
+  app.get("/api/paid-days-off", async (_req: Request, res: Response) => {
+    try {
+      const daysOff = await storage.getAllPaidDaysOff();
+      res.json(daysOff);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar folgas abonadas" });
+    }
+  });
+
+  app.get("/api/paid-days-off/employee/:employeeId", async (req: Request, res: Response) => {
+    try {
+      const daysOff = await storage.getPaidDaysOffByEmployee(req.params.employeeId);
+      res.json(daysOff);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar folgas abonadas" });
+    }
+  });
+
+  app.post("/api/paid-days-off", async (req: Request, res: Response) => {
+    try {
+      const parsed = insertPaidDayOffSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Dados inválidos",
+          errors: parsed.error.flatten(),
+        });
+      }
+
+      const employee = await storage.getEmployee(parsed.data.employeeId);
+      if (!employee) {
+        return res.status(400).json({ message: "Funcionário não encontrado" });
+      }
+
+      const dayOff = await storage.createPaidDayOff(parsed.data);
+      res.status(201).json(dayOff);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao criar folga abonada" });
+    }
+  });
+
+  app.delete("/api/paid-days-off/:id", async (req: Request, res: Response) => {
+    try {
+      const deleted = await storage.deletePaidDayOff(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Folga abonada não encontrada" });
+      }
+      res.status(200).json({ success: true, message: "Folga abonada removida" });
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao remover folga abonada" });
     }
   });
 

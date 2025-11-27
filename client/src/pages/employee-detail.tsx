@@ -65,6 +65,7 @@ import type {
   HoursBank,
   VacationPeriod,
   LeavePeriod,
+  PaidDayOff,
 } from "@shared/schema";
 
 const MONTHS = [
@@ -154,6 +155,115 @@ function hhmmToMinutes(hhmmStr: string): number {
   
   const totalMinutes = hours * 60 + mins;
   return isNegative ? -totalMinutes : totalMinutes;
+}
+
+interface PaidDayOffFormProps {
+  employeeId: string;
+  onSuccess: () => void;
+}
+
+function PaidDayOffForm({ employeeId, onSuccess }: PaidDayOffFormProps) {
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState("");
+  const [hours, setHours] = useState("");
+  const { toast } = useToast();
+
+  const mutation = useMutation({
+    mutationFn: async (data: { employeeId: string; date: string; hours: number; year: number; initialHours?: number }) => {
+      const response = await apiRequest("POST", "/api/paid-days-off", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/paid-days-off"] });
+      toast({
+        title: "Folga abonada registrada",
+        description: "A folga foi adicionada com sucesso.",
+      });
+      setOpen(false);
+      setDate("");
+      setHours("");
+      onSuccess();
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível registrar a folga abonada.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!date || !hours) return;
+    
+    const minutes = hhmmToMinutes(hours);
+    if (minutes === 0) return;
+
+    const dateObj = new Date(date);
+    mutation.mutate({
+      employeeId,
+      date,
+      hours: minutes,
+      year: dateObj.getFullYear(),
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" data-testid="button-add-paid-day-off">
+          <Plus className="h-4 w-4 mr-2" />
+          Adicionar Folga
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Registrar Folga Abonada</DialogTitle>
+          <DialogDescription>
+            Informe a data e a quantidade de horas da folga abonada.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="dayOffDate">Data da Folga</Label>
+            <Input
+              id="dayOffDate"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+              data-testid="input-paid-day-off-date"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="dayOffHours">Horas:Minutos (HH:MM)</Label>
+            <Input
+              id="dayOffHours"
+              type="text"
+              placeholder="Ex: 08:00"
+              value={hours}
+              onChange={(e) => setHours(e.target.value)}
+              required
+              data-testid="input-paid-day-off-hours"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={mutation.isPending} data-testid="button-submit-paid-day-off">
+              {mutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Registrar"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function EmployeeDetailSkeleton() {
@@ -497,6 +607,11 @@ export default function EmployeeDetail() {
     enabled: !!params?.id,
   });
 
+  const { data: paidDaysOff = [], isLoading: loadingPaidDaysOff } = useQuery<PaidDayOff[]>({
+    queryKey: ["/api/paid-days-off"],
+    enabled: !!params?.id,
+  });
+
   const deleteHoursMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await apiRequest("DELETE", `/api/hours-bank/${id}`);
@@ -551,6 +666,24 @@ export default function EmployeeDetail() {
     },
   });
 
+  const deletePaidDayOffMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/paid-days-off/${id}`);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/paid-days-off"] });
+      toast({ title: "Folga abonada removida" });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover a folga abonada.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const updateObservationsMutation = useMutation({
     mutationFn: async (observations: string) => {
       const response = await apiRequest("PATCH", `/api/employees/${params?.id}`, { observations });
@@ -591,6 +724,7 @@ export default function EmployeeDetail() {
   const employeeHours = hoursBank.filter((h) => h.employeeId === employee.id);
   const employeeVacations = vacations.filter((v) => v.employeeId === employee.id);
   const employeeLeaves = leaves.filter((l) => l.employeeId === employee.id);
+  const employeePaidDaysOff = paidDaysOff.filter((d) => d.employeeId === employee.id);
   const totalHours = employeeHours.reduce((sum, h) => sum + h.hours, 0);
 
   const handleSaveObservations = () => {
@@ -666,6 +800,10 @@ export default function EmployeeDetail() {
               <TabsTrigger value="leave" className="flex items-center gap-2" data-testid="tab-leave">
                 <Award className="h-4 w-4" />
                 Licença-Prêmio
+              </TabsTrigger>
+              <TabsTrigger value="paid-off" className="flex items-center gap-2" data-testid="tab-paid-off">
+                <Calendar className="h-4 w-4" />
+                Abonada
               </TabsTrigger>
               <TabsTrigger value="notes" className="flex items-center gap-2" data-testid="tab-notes">
                 <FileText className="h-4 w-4" />
@@ -940,6 +1078,112 @@ export default function EmployeeDetail() {
                           ))}
                         </TableBody>
                       </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="paid-off" className="mt-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-lg">Folgas Abonadas</CardTitle>
+                    <CardDescription>Registro de folgas abonadas por ano</CardDescription>
+                  </div>
+                  <PaidDayOffForm employeeId={employee.id} onSuccess={() => {}} />
+                </CardHeader>
+                <CardContent>
+                  {loadingPaidDaysOff ? (
+                    <div className="space-y-2">
+                      {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="h-12 w-full" />
+                      ))}
+                    </div>
+                  ) : employeePaidDaysOff.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <Calendar className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                      <p className="text-sm text-muted-foreground">
+                        Nenhuma folga abonada registrada
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {Array.from(
+                        { length: Math.max(...employeePaidDaysOff.map(d => d.year), new Date().getFullYear()) - Math.min(...employeePaidDaysOff.map(d => d.year), new Date().getFullYear()) + 1 },
+                        (_, i) => Math.min(...employeePaidDaysOff.map(d => d.year), new Date().getFullYear()) + i
+                      ).map((year) => {
+                        const yearDaysOff = employeePaidDaysOff
+                          .filter(d => d.year === year)
+                          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                        
+                        const totalYearHours = yearDaysOff.reduce((sum, d) => sum + d.hours, 0);
+
+                        return (
+                          <div key={year} className="space-y-4 p-4 border rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-semibold text-lg">{year}</h4>
+                              <Badge variant="outline">{minutesToHHMM(totalYearHours)}</Badge>
+                            </div>
+                            {yearDaysOff.length > 0 && (
+                              <div className="rounded-md border">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Data</TableHead>
+                                      <TableHead className="text-center">Horas</TableHead>
+                                      <TableHead className="w-12"></TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {yearDaysOff.map((dayOff) => (
+                                      <TableRow key={dayOff.id} data-testid={`row-paid-day-off-${dayOff.id}`}>
+                                        <TableCell>
+                                          {formatDate(dayOff.date)}
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                          <Badge variant="default">{minutesToHHMM(dayOff.hours)}</Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                          <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="text-destructive hover:text-destructive"
+                                                data-testid={`button-delete-paid-day-off-${dayOff.id}`}
+                                              >
+                                                <Trash2 className="h-4 w-4" />
+                                              </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                              <AlertDialogHeader>
+                                                <AlertDialogTitle>Remover Folga Abonada</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                  Deseja remover esta folga abonada de {minutesToHHMM(dayOff.hours)} em {formatDate(dayOff.date)}?
+                                                </AlertDialogDescription>
+                                              </AlertDialogHeader>
+                                              <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                  onClick={() => deletePaidDayOffMutation.mutate(dayOff.id)}
+                                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                >
+                                                  Remover
+                                                </AlertDialogAction>
+                                              </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                          </AlertDialog>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>

@@ -66,6 +66,22 @@ export const insertLeaveSchema = createInsertSchema(leavePeriods).omit({
 export type InsertLeave = z.infer<typeof insertLeaveSchema>;
 export type LeavePeriod = typeof leavePeriods.$inferSelect;
 
+export const paidDaysOff = pgTable("paid_days_off", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: varchar("employee_id").notNull(),
+  date: text("date").notNull(),
+  hours: integer("hours").notNull(),
+  year: integer("year").notNull(),
+  initialHours: integer("initial_hours"),
+});
+
+export const insertPaidDayOffSchema = createInsertSchema(paidDaysOff).omit({
+  id: true,
+});
+
+export type InsertPaidDayOff = z.infer<typeof insertPaidDayOffSchema>;
+export type PaidDayOff = typeof paidDaysOff.$inferSelect;
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),

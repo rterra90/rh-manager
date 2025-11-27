@@ -9,6 +9,8 @@ import {
   type InsertVacation,
   type LeavePeriod,
   type InsertLeave,
+  type PaidDayOff,
+  type InsertPaidDayOff,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -40,6 +42,11 @@ export interface IStorage {
   createLeave(leave: InsertLeave): Promise<LeavePeriod>;
   updateLeave(id: string, leave: Partial<InsertLeave>): Promise<LeavePeriod | undefined>;
   deleteLeave(id: string): Promise<boolean>;
+
+  getAllPaidDaysOff(): Promise<PaidDayOff[]>;
+  getPaidDaysOffByEmployee(employeeId: string): Promise<PaidDayOff[]>;
+  createPaidDayOff(dayOff: InsertPaidDayOff): Promise<PaidDayOff>;
+  deletePaidDayOff(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -48,6 +55,7 @@ export class MemStorage implements IStorage {
   private hoursBank: Map<string, HoursBank>;
   private vacations: Map<string, VacationPeriod>;
   private leaves: Map<string, LeavePeriod>;
+  private paidDaysOff: Map<string, PaidDayOff>;
 
   constructor() {
     this.users = new Map();
@@ -55,6 +63,7 @@ export class MemStorage implements IStorage {
     this.hoursBank = new Map();
     this.vacations = new Map();
     this.leaves = new Map();
+    this.paidDaysOff = new Map();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -115,6 +124,9 @@ export class MemStorage implements IStorage {
       }
       for (const [lId, l] of this.leaves) {
         if (l.employeeId === id) this.leaves.delete(lId);
+      }
+      for (const [dId, d] of this.paidDaysOff) {
+        if (d.employeeId === id) this.paidDaysOff.delete(dId);
       }
     }
     return deleted;
@@ -213,6 +225,27 @@ export class MemStorage implements IStorage {
 
   async deleteLeave(id: string): Promise<boolean> {
     return this.leaves.delete(id);
+  }
+
+  async getAllPaidDaysOff(): Promise<PaidDayOff[]> {
+    return Array.from(this.paidDaysOff.values());
+  }
+
+  async getPaidDaysOffByEmployee(employeeId: string): Promise<PaidDayOff[]> {
+    return Array.from(this.paidDaysOff.values()).filter(
+      (d) => d.employeeId === employeeId,
+    );
+  }
+
+  async createPaidDayOff(insertDayOff: InsertPaidDayOff): Promise<PaidDayOff> {
+    const id = randomUUID();
+    const dayOff: PaidDayOff = { ...insertDayOff, id };
+    this.paidDaysOff.set(id, dayOff);
+    return dayOff;
+  }
+
+  async deletePaidDayOff(id: string): Promise<boolean> {
+    return this.paidDaysOff.delete(id);
   }
 }
 
