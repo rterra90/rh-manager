@@ -1129,10 +1129,12 @@ export default function EmployeeDetail() {
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      {Array.from(
-                        { length: Math.max(...employeePaidDaysOff.map(d => d.year), new Date().getFullYear()) - Math.min(...employeePaidDaysOff.map(d => d.year), new Date().getFullYear()) + 1 },
-                        (_, i) => Math.min(...employeePaidDaysOff.map(d => d.year), new Date().getFullYear()) + i
-                      ).map((year) => {
+                      {(() => {
+                        const years = employeePaidDaysOff.map(d => d.year);
+                        const minYear = years.length > 0 ? Math.min(...years) : new Date().getFullYear();
+                        const maxYear = years.length > 0 ? Math.max(...years) : new Date().getFullYear();
+                        return Array.from({ length: maxYear - minYear + 1 }, (_, i) => minYear + i);
+                      })().map((year) => {
                         const yearDaysOff = employeePaidDaysOff
                           .filter(d => d.year === year)
                           .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
