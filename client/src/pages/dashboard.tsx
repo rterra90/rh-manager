@@ -182,8 +182,12 @@ export default function Dashboard() {
 
   const pendingVacations = vacations.filter((v) => v.status === "pending").length;
   const pendingLeaves = leaves.filter((l) => l.status === "pending").length;
-  const upcomingVacations = vacations.filter((v) => isDateInNext3Months(v.startDate));
-  const upcomingLeaves = leaves.filter((l) => isDateInNext3Months(l.startDate));
+  const upcomingVacations = vacations
+    .filter((v) => isDateInNext3Months(v.startDate))
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  const upcomingLeaves = leaves
+    .filter((l) => isDateInNext3Months(l.startDate))
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
 
   const employeesWithNegativeBalance = employees.filter(
     (e) => getEmployeeHoursBalance(e.id) < 0

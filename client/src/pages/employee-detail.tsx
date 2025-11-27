@@ -94,6 +94,24 @@ function formatDate(dateStr: string): string {
   }
 }
 
+function minutesToHHMM(minutes: number): string {
+  const hours = Math.floor(Math.abs(minutes) / 60);
+  const mins = Math.abs(minutes) % 60;
+  const sign = minutes < 0 ? "-" : "";
+  return `${sign}${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
+
+function hhmmToMinutes(hhmmStr: string): number {
+  const isNegative = hhmmStr.startsWith("-");
+  const cleanStr = hhmmStr.replace("-", "");
+  const parts = cleanStr.split(":");
+  if (parts.length !== 2) return 0;
+  const hours = parseInt(parts[0]) || 0;
+  const mins = parseInt(parts[1]) || 0;
+  const totalMinutes = hours * 60 + mins;
+  return isNegative ? -totalMinutes : totalMinutes;
+}
+
 function EmployeeDetailSkeleton() {
   return (
     <div className="space-y-6">
@@ -171,14 +189,14 @@ function HoursBankForm({ employeeId, onSuccess }: HoursBankFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const hoursNum = parseInt(hours);
-    if (isNaN(hoursNum)) return;
+    const minutes = hhmmToMinutes(hours);
+    if (minutes === 0 && hours !== "0:00" && hours !== "-0:00") return;
 
     mutation.mutate({
       employeeId,
       month,
       year,
-      hours: hoursNum,
+      hours: minutes,
       description: description || undefined,
     });
   };
@@ -235,11 +253,11 @@ function HoursBankForm({ employeeId, onSuccess }: HoursBankFormProps) {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="hours">Horas (positivo ou negativo)</Label>
+            <Label htmlFor="hours">Horas:Minutos (HH:MM)</Label>
             <Input
               id="hours"
-              type="number"
-              placeholder="Ex: 8 ou -4"
+              type="text"
+              placeholder="Ex: 08:30 ou -04:15"
               value={hours}
               onChange={(e) => setHours(e.target.value)}
               required
@@ -647,7 +665,7 @@ export default function EmployeeDetail() {
                                 <TableCell className="text-center">
                                   <Badge variant={h.hours < 0 ? "destructive" : "default"}>
                                     {h.hours > 0 ? "+" : ""}
-                                    {h.hours}h
+                                    {minutesToHHMM(h.hours)}
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
@@ -666,7 +684,7 @@ export default function EmployeeDetail() {
                                       <AlertDialogHeader>
                                         <AlertDialogTitle>Remover Lançamento</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                          Deseja remover este lançamento de {h.hours}h?
+                                          Deseja remover este lançamento de {minutesToHHMM(h.hours)}?
                                         </AlertDialogDescription>
                                       </AlertDialogHeader>
                                       <AlertDialogFooter>
@@ -726,7 +744,7 @@ export default function EmployeeDetail() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {employeeVacations.map((v) => (
+                          {employeeVacations.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()).map((v) => (
                             <TableRow key={v.id} data-testid={`row-vacation-${v.id}`}>
                               <TableCell>
                                 {formatDate(v.startDate)} a {formatDate(v.endDate)}
@@ -815,7 +833,7 @@ export default function EmployeeDetail() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {employeeLeaves.map((l) => (
+                          {employeeLeaves.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()).map((l) => (
                             <TableRow key={l.id} data-testid={`row-leave-${l.id}`}>
                               <TableCell>
                                 {formatDate(l.startDate)} a {formatDate(l.endDate)}
