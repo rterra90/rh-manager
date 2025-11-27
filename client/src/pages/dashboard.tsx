@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Users, Clock, Palmtree, AlertTriangle, Plus, Search, Eye, Pencil, Trash2 } from "lucide-react";
+import { Users, Clock, Palmtree, AlertTriangle, Plus, Search, Eye, Pencil, Trash2, Check, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -142,14 +142,48 @@ export default function Dashboard() {
     },
   });
 
+  const approveMutation = useMutation({
+    mutationFn: async ({ id, type, status }: { id: string; type: "vacation" | "leave"; status: "approved" | "rejected" }) => {
+      const endpoint = type === "vacation" ? `/api/vacations/${id}` : `/api/leaves/${id}`;
+      const response = await apiRequest("PATCH", endpoint, { status });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vacations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leaves"] });
+      toast({ title: "Status atualizado com sucesso" });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o status.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const getEmployeeHoursBalance = (employeeId: string): number => {
     return hoursBank
       .filter((h) => h.employeeId === employeeId)
       .reduce((sum, h) => sum + h.hours, 0);
   };
 
+  const getEmployeeNameById = (id: string): string => {
+    return employees.find((e) => e.id === id)?.fullName || "Desconhecido";
+  };
+
+  const isDateInNext3Months = (dateStr: string): boolean => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const threeMonthsLater = new Date();
+    threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
+    return date >= today && date <= threeMonthsLater;
+  };
+
   const pendingVacations = vacations.filter((v) => v.status === "pending").length;
   const pendingLeaves = leaves.filter((l) => l.status === "pending").length;
+  const upcomingVacations = vacations.filter((v) => isDateInNext3Months(v.startDate));
+  const upcomingLeaves = leaves.filter((l) => isDateInNext3Months(l.startDate));
 
   const employeesWithNegativeBalance = employees.filter(
     (e) => getEmployeeHoursBalance(e.id) < 0
@@ -221,6 +255,110 @@ export default function Dashboard() {
           </>
         )}
       </div>
+
+      {(upcomingVacations.length > 0 || upcomingLeaves.length > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Férias e Licenças Próximos 3 Meses</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {upcomingVacations.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <Palmtree className="h-4 w-4" />
+                    Férias Programadas
+                  </h3>
+                  <div className="space-y-2">
+                    {upcomingVacations.map((v) => (
+                      <div key={v.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`card-vacation-${v.id}`}>
+                        <div className="flex-1">
+                          <p className="font-medium">{getEmployeeNameById(v.employeeId)}</p>
+                          <p className="text-sm text-muted-foreground">{v.startDate} até {v.endDate}</p>
+                          {v.notes && <p className="text-sm mt-1">{v.notes}</p>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={v.status === "pending" ? "outline" : v.status === "approved" ? "default" : "destructive"}>
+                            {v.status === "pending" ? "Pendente" : v.status === "approved" ? "Aprovado" : "Rejeitado"}
+                          </Badge>
+                          {v.status === "pending" && (
+                            <div className="flex gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => approveMutation.mutate({ id: v.id, type: "vacation", status: "approved" })}
+                                disabled={approveMutation.isPending}
+                                data-testid={`button-approve-vacation-${v.id}`}
+                              >
+                                <Check className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => approveMutation.mutate({ id: v.id, type: "vacation", status: "rejected" })}
+                                disabled={approveMutation.isPending}
+                                data-testid={`button-reject-vacation-${v.id}`}
+                              >
+                                <X className="h-4 w-4 text-red-600" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {upcomingLeaves.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    Licenças-Prêmio Programadas
+                  </h3>
+                  <div className="space-y-2">
+                    {upcomingLeaves.map((l) => (
+                      <div key={l.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`card-leave-${l.id}`}>
+                        <div className="flex-1">
+                          <p className="font-medium">{getEmployeeNameById(l.employeeId)}</p>
+                          <p className="text-sm text-muted-foreground">{l.startDate} até {l.endDate}</p>
+                          {l.notes && <p className="text-sm mt-1">{l.notes}</p>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={l.status === "pending" ? "outline" : l.status === "approved" ? "default" : "destructive"}>
+                            {l.status === "pending" ? "Pendente" : l.status === "approved" ? "Aprovado" : "Rejeitado"}
+                          </Badge>
+                          {l.status === "pending" && (
+                            <div className="flex gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => approveMutation.mutate({ id: l.id, type: "leave", status: "approved" })}
+                                disabled={approveMutation.isPending}
+                                data-testid={`button-approve-leave-${l.id}`}
+                              >
+                                <Check className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => approveMutation.mutate({ id: l.id, type: "leave", status: "rejected" })}
+                                disabled={approveMutation.isPending}
+                                data-testid={`button-reject-leave-${l.id}`}
+                              >
+                                <X className="h-4 w-4 text-red-600" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
