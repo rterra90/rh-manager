@@ -1,6 +1,6 @@
 import { useRoute, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -730,10 +730,10 @@ export default function EmployeeDetail() {
   const [initialHoursByYear, setInitialHoursByYear] = useState<Record<number, string>>({});
 
   const currentYear = new Date().getFullYear();
-  const currentYearDaysOff = employeePaidDaysOff.filter(d => d.year === currentYear);
-  const usedHoursCurrentYear = currentYearDaysOff.reduce((sum, d) => sum + d.hours, 0);
-  const initialHoursCurrentYear = initialHoursByYear[currentYear] ? hhmmToMinutes(initialHoursByYear[currentYear]) : 0;
-  const balancePaidDaysOffCurrentYear = initialHoursCurrentYear - usedHoursCurrentYear;
+  const currentYearDaysOff = useMemo(() => employeePaidDaysOff.filter(d => d.year === currentYear), [employeePaidDaysOff]);
+  const usedHoursCurrentYear = useMemo(() => currentYearDaysOff.reduce((sum, d) => sum + d.hours, 0), [currentYearDaysOff]);
+  const initialHoursCurrentYear = useMemo(() => initialHoursByYear[currentYear] ? hhmmToMinutes(initialHoursByYear[currentYear]) : 0, [initialHoursByYear, currentYear]);
+  const balancePaidDaysOffCurrentYear = useMemo(() => initialHoursCurrentYear - usedHoursCurrentYear, [initialHoursCurrentYear, usedHoursCurrentYear]);
 
   const handleSaveObservations = () => {
     updateObservationsMutation.mutate(currentObservations);
