@@ -197,6 +197,34 @@ export default function Dashboard() {
     return date >= today && date <= threeMonthsLater;
   };
 
+  const isDateRangeActive = (startDate: string, endDate: string): boolean => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+    return today >= start && today <= end;
+  };
+
+  const employeesOnVacation = employees
+    .filter((e) => {
+      const employeeVacations = vacations.filter(
+        (v) => v.employeeId === e.id && (v.status === "approved" || v.status === "pending") && isDateRangeActive(v.startDate, v.endDate)
+      );
+      const employeeLeaves = leaves.filter(
+        (l) => l.employeeId === e.id && (l.status === "approved" || l.status === "pending") && isDateRangeActive(l.startDate, l.endDate)
+      );
+      return employeeVacations.length > 0 || employeeLeaves.length > 0;
+    })
+    .map((e) => ({
+      employee: e,
+      periods: [
+        ...vacations.filter((v) => v.employeeId === e.id && (v.status === "approved" || v.status === "pending") && isDateRangeActive(v.startDate, v.endDate)).map(v => ({ ...v, type: "vacation" })),
+        ...leaves.filter((l) => l.employeeId === e.id && (l.status === "approved" || l.status === "pending") && isDateRangeActive(l.startDate, l.endDate)).map(l => ({ ...l, type: "leave" }))
+      ]
+    }));
+
   const pendingVacations = vacations.filter((v) => v.status === "pending").length;
   const pendingLeaves = leaves.filter((l) => l.status === "pending").length;
   const upcomingVacations = vacations
@@ -276,6 +304,37 @@ export default function Dashboard() {
           </>
         )}
       </div>
+
+      {employeesOnVacation.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Funcionários em Férias/Licença Hoje</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {employeesOnVacation.map(({ employee, periods }) => (
+                <div key={employee.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`card-on-vacation-${employee.id}`}>
+                  <div className="flex-1">
+                    <Link href={`/employees/${employee.id}`}>
+                      <p className="font-medium text-primary hover:underline cursor-pointer">{employee.fullName}</p>
+                    </Link>
+                    <p className="text-sm text-muted-foreground">
+                      {periods.map(p => p.type === "vacation" ? "Férias" : "Licença-Prêmio").join(" + ")}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    {periods.map((p) => (
+                      <Badge key={p.id} variant={p.status === "pending" ? "outline" : "default"}>
+                        {p.status === "pending" ? "Pendente" : "Aprovado"}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {(upcomingVacations.length > 0 || upcomingLeaves.length > 0) && (
         <Card>
@@ -438,7 +497,9 @@ export default function Dashboard() {
                     return (
                       <TableRow key={employee.id} data-testid={`row-employee-${employee.id}`}>
                         <TableCell className="font-medium">
-                          {employee.fullName}
+                          <Link href={`/employees/${employee.id}`}>
+                            <span className="text-primary hover:underline cursor-pointer">{employee.fullName}</span>
+                          </Link>
                         </TableCell>
                         <TableCell>{employee.registrationNumber}</TableCell>
                         <TableCell>{employee.position}</TableCell>
