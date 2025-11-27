@@ -406,7 +406,7 @@ export default function Dashboard() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant={v.status === "pending" ? "outline" : v.status === "approved" ? "default" : "destructive"}>
-                            {v.status === "pending" ? "Pendente" : v.status === "approved" ? "Aprovado" : "Rejeitado"}
+                            {v.status === "pending" ? "Pendente" : v.status === "approved" ? "Lançado no sistema" : "Rejeitado"}
                           </Badge>
                           {v.status === "pending" && (
                             <div className="flex gap-1">
@@ -452,7 +452,7 @@ export default function Dashboard() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant={l.status === "pending" ? "outline" : l.status === "approved" ? "default" : "destructive"}>
-                            {l.status === "pending" ? "Pendente" : l.status === "approved" ? "Aprovado" : "Rejeitado"}
+                            {l.status === "pending" ? "Pendente" : l.status === "approved" ? "Lançado no sistema" : "Rejeitado"}
                           </Badge>
                           {l.status === "pending" && (
                             <div className="flex gap-1">
@@ -500,6 +500,18 @@ export default function Dashboard() {
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
             <CardTitle>Funcionários</CardTitle>
+            {expandedSections.employees && (
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar funcionário..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                  data-testid="input-search-employee"
+                />
+              </div>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -511,16 +523,6 @@ export default function Dashboard() {
                 className={`h-4 w-4 transition-transform ${expandedSections.employees ? "" : "-rotate-90"}`}
               />
             </Button>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Buscar funcionário..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-                data-testid="input-search-employee"
-              />
-            </div>
           </div>
         </CardHeader>
         {expandedSections.employees ? (
