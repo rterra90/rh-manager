@@ -153,7 +153,14 @@ export class MemStorage implements IStorage {
 
   async createVacation(insertVacation: InsertVacation): Promise<VacationPeriod> {
     const id = randomUUID();
-    const vacation: VacationPeriod = { ...insertVacation, id };
+    // Auto-approve if start date is today or in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(insertVacation.startDate);
+    startDate.setHours(0, 0, 0, 0);
+    
+    const status = startDate <= today ? "approved" : insertVacation.status;
+    const vacation: VacationPeriod = { ...insertVacation, status, id };
     this.vacations.set(id, vacation);
     return vacation;
   }
@@ -183,7 +190,14 @@ export class MemStorage implements IStorage {
 
   async createLeave(insertLeave: InsertLeave): Promise<LeavePeriod> {
     const id = randomUUID();
-    const leave: LeavePeriod = { ...insertLeave, id };
+    // Auto-approve if start date is today or in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(insertLeave.startDate);
+    startDate.setHours(0, 0, 0, 0);
+    
+    const status = startDate <= today ? "approved" : insertLeave.status;
+    const leave: LeavePeriod = { ...insertLeave, status, id };
     this.leaves.set(id, leave);
     return leave;
   }

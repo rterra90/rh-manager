@@ -188,31 +188,6 @@ export default function Dashboard() {
     },
   });
 
-  // Auto-approve pending vacations/leaves that have already started
-  const autoApprovePeriods = async () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const pendingStarted = [
-      ...vacations.filter(v => v.status === "pending" && new Date(v.startDate) <= today),
-      ...leaves.filter(l => l.status === "pending" && new Date(l.startDate) <= today)
-    ];
-
-    for (const period of pendingStarted) {
-      const type = "startDate" in vacations.find(v => v.id === period.id) ? "vacation" : "leave";
-      try {
-        await approveMutation.mutateAsync({ id: period.id, type: type as "vacation" | "leave", status: "approved" });
-      } catch {
-        // Silent fail
-      }
-    }
-  };
-
-  // Auto-approve on load
-  if ((vacations.length > 0 || leaves.length > 0) && vacations.some(v => v.status === "pending" && new Date(v.startDate) <= new Date()) || leaves.some(l => l.status === "pending" && new Date(l.startDate) <= new Date())) {
-    autoApprovePeriods();
-  }
-
   const getEmployeeHoursBalance = (employeeId: string): number => {
     return hoursBank
       .filter((h) => h.employeeId === employeeId)
