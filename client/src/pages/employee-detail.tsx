@@ -102,12 +102,56 @@ function minutesToHHMM(minutes: number): string {
 }
 
 function hhmmToMinutes(hhmmStr: string): number {
-  const isNegative = hhmmStr.startsWith("-");
-  const cleanStr = hhmmStr.replace("-", "");
-  const parts = cleanStr.split(":");
-  if (parts.length !== 2) return 0;
-  const hours = parseInt(parts[0]) || 0;
-  const mins = parseInt(parts[1]) || 0;
+  if (!hhmmStr) return 0;
+  
+  const isNegative = hhmmStr.startsWith("-") || hhmmStr.startsWith("+") && hhmmStr.length > 1 && hhmmStr[0] === "-";
+  const cleanStr = hhmmStr.replace(/^[+-]/, "").trim();
+  
+  let hours = 0;
+  let mins = 0;
+  
+  // Se contém dois pontos, usa split normal
+  if (cleanStr.includes(":")) {
+    const parts = cleanStr.split(":");
+    if (parts.length === 2) {
+      hours = parseInt(parts[0]) || 0;
+      mins = parseInt(parts[1]) || 0;
+    }
+  } else {
+    // Se não contém dois pontos, interpreta como dígitos
+    // "0315" = 03h15m, "315" = 3h15m, "15" = 0h15m
+    const digits = cleanStr.replace(/\D/g, ""); // Remove caracteres não-numéricos
+    
+    if (digits.length === 4) {
+      // "0315" -> hh e mm
+      hours = parseInt(digits.substring(0, 2)) || 0;
+      mins = parseInt(digits.substring(2, 4)) || 0;
+    } else if (digits.length === 3) {
+      // "315" -> h e mm
+      hours = parseInt(digits.substring(0, 1)) || 0;
+      mins = parseInt(digits.substring(1, 3)) || 0;
+    } else if (digits.length === 2) {
+      // "15" -> mm
+      mins = parseInt(digits) || 0;
+    } else if (digits.length > 0) {
+      // "3" ou números variáveis
+      const num = parseInt(digits);
+      if (num > 60) {
+        // Provavelmente é HHmm sem leading zero
+        hours = Math.floor(num / 100);
+        mins = num % 100;
+      } else {
+        mins = num;
+      }
+    }
+  }
+  
+  // Validar minutos (não podem ser >= 60)
+  if (mins >= 60) {
+    hours += Math.floor(mins / 60);
+    mins = mins % 60;
+  }
+  
   const totalMinutes = hours * 60 + mins;
   return isNegative ? -totalMinutes : totalMinutes;
 }
@@ -257,7 +301,7 @@ function HoursBankForm({ employeeId, onSuccess }: HoursBankFormProps) {
             <Input
               id="hours"
               type="text"
-              placeholder="Ex: 08:30 ou -04:15"
+              placeholder="Ex: 08:30 ou -04:15 (aceita: 0830, 830, -0330, etc)"
               value={hours}
               onChange={(e) => setHours(e.target.value)}
               required
