@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { Users, Clock, Palmtree, AlertTriangle, Plus, Search, Eye, Pencil, Trash2, Check, X, ChevronDown, Award } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { BulkImportDialog } from "@/components/bulk-import-dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -298,12 +299,15 @@ export default function Dashboard() {
             Visão geral da gestão de recursos humanos
           </p>
         </div>
-        <Link href="/employees/new">
-          <Button data-testid="button-add-employee">
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Funcionário
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <BulkImportDialog />
+          <Link href="/employees/new">
+            <Button data-testid="button-add-employee">
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Funcionário
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

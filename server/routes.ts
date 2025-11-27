@@ -56,6 +56,80 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/employees/bulk", async (req: Request, res: Response) => {
+    try {
+      const { rows } = req.body;
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return res.status(400).json({ message: "Nenhuma linha válida no arquivo" });
+      }
+
+      const sanitizeRegistration = (reg: string): string => {
+        return reg.replace(/[\s.-]/g, "").trim();
+      };
+
+      const existingEmployees = await storage.getAllEmployees();
+      const sanitizedExisting = new Set(
+        existingEmployees.map(e => sanitizeRegistration(e.registrationNumber))
+      );
+
+      const duplicates: Array<{ row: number; fullName: string; registrationNumber: string; reason: string }> = [];
+      let created = 0;
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const { fullName, registrationNumber, position } = row;
+
+        // Validate required fields
+        if (!fullName || !registrationNumber || !position) {
+          duplicates.push({
+            row: i + 1,
+            fullName: fullName || "Desconhecido",
+            registrationNumber: registrationNumber || "Vazio",
+            reason: "Dados incompletos",
+          });
+          continue;
+        }
+
+        const sanitized = sanitizeRegistration(registrationNumber);
+        if (sanitizedExisting.has(sanitized)) {
+          duplicates.push({
+            row: i + 1,
+            fullName,
+            registrationNumber,
+            reason: "Matrícula já existe",
+          });
+          continue;
+        }
+
+        try {
+          // Create employee with sanitized registration number
+          const employee = await storage.createEmployee({
+            fullName,
+            registrationNumber: sanitized,
+            position,
+          });
+          sanitizedExisting.add(sanitized);
+          created++;
+        } catch (error) {
+          duplicates.push({
+            row: i + 1,
+            fullName,
+            registrationNumber,
+            reason: "Erro ao criar",
+          });
+        }
+      }
+
+      res.status(200).json({
+        totalRows: rows.length,
+        created,
+        duplicates,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao processar importação" });
+    }
+  });
+
   app.patch("/api/employees/:id", async (req: Request, res: Response) => {
     try {
       const existingEmployee = await storage.getEmployee(req.params.id);
