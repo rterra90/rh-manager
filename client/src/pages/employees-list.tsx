@@ -64,6 +64,7 @@ function EmployeeTableSkeleton() {
 export default function EmployeesList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [hoursFilter, setHoursFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("name");
   const { toast } = useToast();
 
   const { data: employees = [], isLoading: loadingEmployees } = useQuery<Employee[]>({
@@ -104,21 +105,38 @@ export default function EmployeesList() {
       .reduce((sum, h) => sum + h.hours, 0);
   };
 
-  const filteredEmployees = employees.filter((employee) => {
-    const matchesSearch =
-      employee.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.registrationNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.position.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredEmployees = employees
+    .filter((employee) => {
+      const matchesSearch =
+        employee.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        employee.registrationNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        employee.position.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const hoursBalance = getEmployeeHoursBalance(employee.id);
-    const matchesHours =
-      hoursFilter === "all" ||
-      (hoursFilter === "positive" && hoursBalance > 0) ||
-      (hoursFilter === "negative" && hoursBalance < 0) ||
-      (hoursFilter === "zero" && hoursBalance === 0);
+      const hoursBalance = getEmployeeHoursBalance(employee.id);
+      const matchesHours =
+        hoursFilter === "all" ||
+        (hoursFilter === "positive" && hoursBalance > 0) ||
+        (hoursFilter === "negative" && hoursBalance < 0) ||
+        (hoursFilter === "zero" && hoursBalance === 0);
 
-    return matchesSearch && matchesHours;
-  });
+      return matchesSearch && matchesHours;
+    })
+    .sort((a, b) => {
+      if (sortBy === "name") {
+        return a.fullName.localeCompare(b.fullName, "pt-BR");
+      } else if (sortBy === "negative-hours") {
+        const balanceA = getEmployeeHoursBalance(a.id);
+        const balanceB = getEmployeeHoursBalance(b.id);
+        return balanceA - balanceB;
+      } else if (sortBy === "positive-hours") {
+        const balanceA = getEmployeeHoursBalance(a.id);
+        const balanceB = getEmployeeHoursBalance(b.id);
+        return balanceB - balanceA;
+      } else if (sortBy === "position") {
+        return a.position.localeCompare(b.position, "pt-BR");
+      }
+      return 0;
+    });
 
   return (
     <div className="space-y-6">
@@ -168,6 +186,17 @@ export default function EmployeesList() {
                   <SelectItem value="positive">Horas Positivas</SelectItem>
                   <SelectItem value="negative">Horas Negativas</SelectItem>
                   <SelectItem value="zero">Sem Horas</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-full sm:w-56" data-testid="select-sort-by">
+                  <SelectValue placeholder="Ordenar por" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Nome (A-Z)</SelectItem>
+                  <SelectItem value="negative-hours">Banco de Horas Negativo</SelectItem>
+                  <SelectItem value="positive-hours">Banco de Horas Positivo</SelectItem>
+                  <SelectItem value="position">Cargo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
