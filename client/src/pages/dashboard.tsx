@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Users, Clock, Palmtree, AlertTriangle, Plus, Search, Eye, Pencil, Trash2, Check, X } from "lucide-react";
+import { Users, Clock, Palmtree, AlertTriangle, Plus, Search, Eye, Pencil, Trash2, Check, X, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -117,7 +117,16 @@ function EmployeeTableSkeleton() {
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [expandedSections, setExpandedSections] = useState({
+    onVacation: true,
+    upcomingVacations: true,
+    employees: true
+  });
   const { toast } = useToast();
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   const { data: employees = [], isLoading: loadingEmployees } = useQuery<Employee[]>({
     queryKey: ["/api/employees"],
@@ -178,6 +187,31 @@ export default function Dashboard() {
       });
     },
   });
+
+  // Auto-approve pending vacations/leaves that have already started
+  const autoApprovePeriods = async () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const pendingStarted = [
+      ...vacations.filter(v => v.status === "pending" && new Date(v.startDate) <= today),
+      ...leaves.filter(l => l.status === "pending" && new Date(l.startDate) <= today)
+    ];
+
+    for (const period of pendingStarted) {
+      const type = "startDate" in vacations.find(v => v.id === period.id) ? "vacation" : "leave";
+      try {
+        await approveMutation.mutateAsync({ id: period.id, type: type as "vacation" | "leave", status: "approved" });
+      } catch {
+        // Silent fail
+      }
+    }
+  };
+
+  // Auto-approve on load
+  if ((vacations.length > 0 || leaves.length > 0) && vacations.some(v => v.status === "pending" && new Date(v.startDate) <= new Date()) || leaves.some(l => l.status === "pending" && new Date(l.startDate) <= new Date())) {
+    autoApprovePeriods();
+  }
 
   const getEmployeeHoursBalance = (employeeId: string): number => {
     return hoursBank
@@ -308,43 +342,78 @@ export default function Dashboard() {
       {employeesOnVacation.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Funcionários em Férias/Licença Hoje</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {employeesOnVacation.map(({ employee, periods }) => (
-                <div key={employee.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`card-on-vacation-${employee.id}`}>
-                  <div className="flex-1">
-                    <Link href={`/employees/${employee.id}`}>
-                      <p className="font-medium text-primary hover:underline cursor-pointer">{employee.fullName}</p>
-                    </Link>
-                    <p className="text-sm text-muted-foreground">
-                      {periods.map(p => p.type === "vacation" ? "Férias" : "Licença-Prêmio").join(" + ")}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Término: <span className="font-medium">{formatDate(periods[0].endDate)}</span>
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    {periods.map((p) => (
-                      <Badge key={p.id} variant={p.status === "pending" ? "outline" : "default"}>
-                        {p.status === "pending" ? "Pendente" : "Aprovado"}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle>Funcionários em Férias/Licença Hoje</CardTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => toggleSection("onVacation")}
+                data-testid="button-toggle-on-vacation"
+                className="h-6 w-6"
+              >
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${expandedSections.onVacation ? "" : "-rotate-90"}`}
+                />
+              </Button>
             </div>
-          </CardContent>
+          </CardHeader>
+          {expandedSections.onVacation ? (
+            <CardContent>
+              <div className="space-y-2">
+                {employeesOnVacation.map(({ employee, periods }) => (
+                  <div key={employee.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`card-on-vacation-${employee.id}`}>
+                    <div className="flex-1">
+                      <Link href={`/employees/${employee.id}`}>
+                        <p className="font-medium text-primary hover:underline cursor-pointer">{employee.fullName}</p>
+                      </Link>
+                      <p className="text-sm text-muted-foreground">
+                        {periods.map(p => p.type === "vacation" ? "Férias" : "Licença-Prêmio").join(" + ")}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Término: <span className="font-medium">{formatDate(periods[0].endDate)}</span>
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      {periods.map((p) => (
+                        <Badge key={p.id} variant={p.status === "pending" ? "outline" : "default"}>
+                          {p.status === "pending" ? "Pendente" : "Aprovado"}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          ) : (
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                {employeesOnVacation.length} funcionário{employeesOnVacation.length > 1 ? "s" : ""} em férias/licença hoje
+              </p>
+            </CardContent>
+          )}
         </Card>
       )}
 
       {(upcomingVacations.length > 0 || upcomingLeaves.length > 0) && (
         <Card>
           <CardHeader>
-            <CardTitle>Férias e Licenças Próximos 3 Meses</CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle>Férias e Licenças Próximos 3 Meses</CardTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => toggleSection("upcomingVacations")}
+                data-testid="button-toggle-upcoming-vacations"
+                className="h-6 w-6"
+              >
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${expandedSections.upcomingVacations ? "" : "-rotate-90"}`}
+                />
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent>
+          {expandedSections.upcomingVacations ? (
+            <CardContent>
             <div className="space-y-4">
               {upcomingVacations.length > 0 && (
                 <div>
@@ -440,13 +509,33 @@ export default function Dashboard() {
               )}
             </div>
           </CardContent>
+          ) : (
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                {upcomingVacations.length + upcomingLeaves.length} período{upcomingVacations.length + upcomingLeaves.length > 1 ? "s" : ""} agendado{upcomingVacations.length + upcomingLeaves.length > 1 ? "s" : ""} • 
+                <span className="font-medium ml-1">{vacations.filter(v => isDateInNext3Months(v.startDate) && v.status === "approved").length + leaves.filter(l => isDateInNext3Months(l.startDate) && l.status === "approved").length} aprovado{vacations.filter(v => isDateInNext3Months(v.startDate) && v.status === "approved").length + leaves.filter(l => isDateInNext3Months(l.startDate) && l.status === "approved").length > 1 ? "s" : ""}</span> • 
+                <span className="font-medium ml-1">{vacations.filter(v => isDateInNext3Months(v.startDate) && v.status === "pending").length + leaves.filter(l => isDateInNext3Months(l.startDate) && l.status === "pending").length} pendente{vacations.filter(v => isDateInNext3Months(v.startDate) && v.status === "pending").length + leaves.filter(l => isDateInNext3Months(l.startDate) && l.status === "pending").length > 1 ? "s" : ""}</span>
+              </p>
+            </CardContent>
+          )}
         </Card>
       )}
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center justify-between gap-2">
             <CardTitle>Funcionários</CardTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => toggleSection("employees")}
+              data-testid="button-toggle-employees"
+              className="h-6 w-6"
+            >
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${expandedSections.employees ? "" : "-rotate-90"}`}
+              />
+            </Button>
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -459,7 +548,8 @@ export default function Dashboard() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        {expandedSections.employees ? (
+          <CardContent>
           {loadingEmployees ? (
             <EmployeeTableSkeleton />
           ) : filteredEmployees.length === 0 ? (
@@ -590,6 +680,13 @@ export default function Dashboard() {
             </div>
           )}
         </CardContent>
+        ) : (
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              {filteredEmployees.length} funcionário{filteredEmployees.length > 1 ? "s" : ""} cadastrado{filteredEmployees.length > 1 ? "s" : ""}
+            </p>
+          </CardContent>
+        )}
       </Card>
     </div>
   );
