@@ -262,29 +262,24 @@ export default function Dashboard() {
   // Paid days off logic
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const todayString = today.toISOString().split('T')[0];
+  
   const sevenDaysLater = new Date(today);
   sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+  const sevenDaysLaterString = sevenDaysLater.toISOString().split('T')[0];
 
   const paidDaysOffToday = paidDaysOff
-    .filter(p => {
-      const paidDate = new Date(p.date);
-      paidDate.setHours(0, 0, 0, 0);
-      return paidDate.getTime() === today.getTime();
-    })
+    .filter(p => p.date === todayString)
     .map(p => ({ ...p, employee: employees.find(e => e.id === p.employeeId) }))
     .filter(p => p.employee)
     .sort((a, b) => a.employee!.fullName.localeCompare(b.employee!.fullName));
 
   const paidDaysOffNext7Days = paidDaysOff
-    .filter(p => {
-      const paidDate = new Date(p.date);
-      paidDate.setHours(0, 0, 0, 0);
-      return paidDate > today && paidDate <= sevenDaysLater;
-    })
+    .filter(p => p.date > todayString && p.date <= sevenDaysLaterString)
     .map(p => ({ ...p, employee: employees.find(e => e.id === p.employeeId) }))
     .filter(p => p.employee)
     .sort((a, b) => {
-      const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
+      const dateCompare = a.date.localeCompare(b.date);
       if (dateCompare !== 0) return dateCompare;
       return a.employee!.fullName.localeCompare(b.employee!.fullName);
     });
