@@ -35,6 +35,23 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+function formatDate(dateStr: string): string {
+  try {
+    return format(parseISO(dateStr), "dd/MM/yyyy", { locale: ptBR });
+  } catch {
+    return dateStr;
+  }
+}
+
+function minutesToHHMM(minutes: number): string {
+  const hours = Math.floor(Math.abs(minutes) / 60);
+  const mins = Math.abs(minutes) % 60;
+  const sign = minutes < 0 ? "-" : "";
+  return `${sign}${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
 
 interface StatsCardProps {
   title: string;
@@ -278,7 +295,7 @@ export default function Dashboard() {
                       <div key={v.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`card-vacation-${v.id}`}>
                         <div className="flex-1">
                           <p className="font-medium">{getEmployeeNameById(v.employeeId)}</p>
-                          <p className="text-sm text-muted-foreground">{v.startDate} até {v.endDate}</p>
+                          <p className="text-sm text-muted-foreground">{formatDate(v.startDate)} até {formatDate(v.endDate)}</p>
                           {v.notes && <p className="text-sm mt-1">{v.notes}</p>}
                         </div>
                         <div className="flex items-center gap-2">
@@ -324,7 +341,7 @@ export default function Dashboard() {
                       <div key={l.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`card-leave-${l.id}`}>
                         <div className="flex-1">
                           <p className="font-medium">{getEmployeeNameById(l.employeeId)}</p>
-                          <p className="text-sm text-muted-foreground">{l.startDate} até {l.endDate}</p>
+                          <p className="text-sm text-muted-foreground">{formatDate(l.startDate)} até {formatDate(l.endDate)}</p>
                           {l.notes && <p className="text-sm mt-1">{l.notes}</p>}
                         </div>
                         <div className="flex items-center gap-2">
@@ -430,7 +447,7 @@ export default function Dashboard() {
                             variant={hoursBalance < 0 ? "destructive" : hoursBalance > 0 ? "default" : "secondary"}
                           >
                             {hoursBalance > 0 ? "+" : ""}
-                            {hoursBalance}h
+                            {minutesToHHMM(hoursBalance)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
