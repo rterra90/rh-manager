@@ -85,7 +85,7 @@ export async function registerRoutes(
       if (!deleted) {
         return res.status(404).json({ message: "Funcionário não encontrado" });
       }
-      res.status(204).send();
+      res.status(200).json({ success: true, message: "Funcionário removido" });
     } catch (error) {
       res.status(500).json({ message: "Erro ao remover funcionário" });
     }
@@ -137,7 +137,7 @@ export async function registerRoutes(
       if (!deleted) {
         return res.status(404).json({ message: "Lançamento não encontrado" });
       }
-      res.status(204).send();
+      res.status(200).json({ success: true, message: "Lançamento removido" });
     } catch (error) {
       res.status(500).json({ message: "Erro ao remover lançamento" });
     }
@@ -201,7 +201,7 @@ export async function registerRoutes(
       if (!deleted) {
         return res.status(404).json({ message: "Período de férias não encontrado" });
       }
-      res.status(204).send();
+      res.status(200).json({ success: true, message: "Período de férias removido" });
     } catch (error) {
       res.status(500).json({ message: "Erro ao remover período de férias" });
     }
@@ -265,7 +265,7 @@ export async function registerRoutes(
       if (!deleted) {
         return res.status(404).json({ message: "Período de licença não encontrado" });
       }
-      res.status(204).send();
+      res.status(200).json({ success: true, message: "Período de licença removido" });
     } catch (error) {
       res.status(500).json({ message: "Erro ao remover período de licença" });
     }
