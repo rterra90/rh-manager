@@ -42,6 +42,13 @@ import type { Employee, HoursBank } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+function minutesToHHMM(minutes: number): string {
+  const hours = Math.floor(Math.abs(minutes) / 60);
+  const mins = Math.abs(minutes) % 60;
+  const sign = minutes < 0 ? "-" : "";
+  return `${sign}${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
+
 function EmployeeTableSkeleton() {
   return (
     <div className="space-y-3">
@@ -230,7 +237,7 @@ export default function EmployeesList() {
                             }
                           >
                             {hoursBalance > 0 ? "+" : ""}
-                            {hoursBalance}h
+                            {minutesToHHMM(hoursBalance)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">

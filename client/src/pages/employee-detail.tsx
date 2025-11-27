@@ -631,7 +631,7 @@ export default function EmployeeDetail() {
                 className="mt-1"
               >
                 {totalHours > 0 ? "+" : ""}
-                {totalHours}h
+                {minutesToHHMM(totalHours)}
               </Badge>
             </div>
           </CardContent>
