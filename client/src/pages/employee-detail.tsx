@@ -612,6 +612,10 @@ export default function EmployeeDetail() {
     enabled: !!params?.id,
   });
 
+  // All state and memoized values MUST be declared before any conditional returns
+  const [observations, setObservations] = useState<string | null>(null);
+  const [initialHoursByYear, setInitialHoursByYear] = useState<Record<number, string>>({});
+
   const deleteHoursMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await apiRequest("DELETE", `/api/hours-bank/${id}`);
@@ -702,8 +706,22 @@ export default function EmployeeDetail() {
     },
   });
 
-  const [observations, setObservations] = useState<string | null>(null);
+  const currentYear = new Date().getFullYear();
+  
+  // Compute derived values for use below
   const currentObservations = observations !== null ? observations : (employee?.observations || "");
+  
+  // Filter employee-specific data - must be after !employee check 
+  const employeeHours = useMemo(() => employee ? hoursBank.filter((h) => h.employeeId === employee.id) : [], [hoursBank, employee]);
+  const employeeVacations = useMemo(() => employee ? vacations.filter((v) => v.employeeId === employee.id) : [], [vacations, employee]);
+  const employeeLeaves = useMemo(() => employee ? leaves.filter((l) => l.employeeId === employee.id) : [], [leaves, employee]);
+  const employeePaidDaysOff = useMemo(() => employee ? paidDaysOff.filter((d) => d.employeeId === employee.id) : [], [paidDaysOff, employee]);
+  const totalHours = useMemo(() => employeeHours.reduce((sum, h) => sum + h.hours, 0), [employeeHours]);
+  
+  const currentYearDaysOff = useMemo(() => employeePaidDaysOff.filter(d => d.year === currentYear), [employeePaidDaysOff, currentYear]);
+  const usedHoursCurrentYear = useMemo(() => currentYearDaysOff.reduce((sum, d) => sum + d.hours, 0), [currentYearDaysOff]);
+  const initialHoursCurrentYear = useMemo(() => initialHoursByYear[currentYear] ? hhmmToMinutes(initialHoursByYear[currentYear]) : 0, [initialHoursByYear, currentYear]);
+  const balancePaidDaysOffCurrentYear = useMemo(() => initialHoursCurrentYear - usedHoursCurrentYear, [initialHoursCurrentYear, usedHoursCurrentYear]);
 
   if (loadingEmployee) {
     return <EmployeeDetailSkeleton />;
@@ -720,20 +738,6 @@ export default function EmployeeDetail() {
       </div>
     );
   }
-
-  const employeeHours = hoursBank.filter((h) => h.employeeId === employee.id);
-  const employeeVacations = vacations.filter((v) => v.employeeId === employee.id);
-  const employeeLeaves = leaves.filter((l) => l.employeeId === employee.id);
-  const employeePaidDaysOff = paidDaysOff.filter((d) => d.employeeId === employee.id);
-  const totalHours = employeeHours.reduce((sum, h) => sum + h.hours, 0);
-
-  const [initialHoursByYear, setInitialHoursByYear] = useState<Record<number, string>>({});
-
-  const currentYear = new Date().getFullYear();
-  const currentYearDaysOff = useMemo(() => employeePaidDaysOff.filter(d => d.year === currentYear), [employeePaidDaysOff]);
-  const usedHoursCurrentYear = useMemo(() => currentYearDaysOff.reduce((sum, d) => sum + d.hours, 0), [currentYearDaysOff]);
-  const initialHoursCurrentYear = useMemo(() => initialHoursByYear[currentYear] ? hhmmToMinutes(initialHoursByYear[currentYear]) : 0, [initialHoursByYear, currentYear]);
-  const balancePaidDaysOffCurrentYear = useMemo(() => initialHoursCurrentYear - usedHoursCurrentYear, [initialHoursCurrentYear, usedHoursCurrentYear]);
 
   const handleSaveObservations = () => {
     updateObservationsMutation.mutate(currentObservations);
