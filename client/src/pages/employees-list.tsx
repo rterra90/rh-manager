@@ -1,13 +1,12 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link } from "wouter";
-import { useState } from "react";
-import { Users, Plus, Search, Eye, Pencil, Trash2, Filter, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { Link } from 'wouter';
+import { useState } from 'react';
+import { Users, Plus, Search, Eye, Pencil, Trash2, Filter } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -15,12 +14,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from '@/components/ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,23 +30,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import type { Employee, HoursBank } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+} from '@/components/ui/select';
+import type { Employee, HoursBank } from '@shared/schema';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 function minutesToHHMM(minutes: number): string {
   const hours = Math.floor(Math.abs(minutes) / 60);
   const mins = Math.abs(minutes) % 60;
-  const sign = minutes < 0 ? "-" : "";
-  return `${sign}${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+  const sign = minutes < 0 ? '-' : '';
+  return `${sign}${String(hours).padStart(2, '0')}:${String(mins).padStart(
+    2,
+    '0',
+  )}`;
 }
 
 function EmployeeTableSkeleton() {
@@ -63,67 +65,41 @@ function EmployeeTableSkeleton() {
 }
 
 export default function EmployeesList() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [hoursFilter, setHoursFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<string>("name");
-  const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set());
-  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [hoursFilter, setHoursFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('name');
   const { toast } = useToast();
 
-  const { data: employees = [], isLoading: loadingEmployees } = useQuery<Employee[]>({
-    queryKey: ["/api/employees"],
+  const { data: employees = [], isLoading: loadingEmployees } = useQuery<
+    Employee[]
+  >({
+    queryKey: ['/api/employees'],
   });
 
   const { data: hoursBank = [] } = useQuery<HoursBank[]>({
-    queryKey: ["/api/hours-bank"],
+    queryKey: ['/api/hours-bank'],
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await apiRequest("DELETE", `/api/employees/${id}`);
+      const response = await apiRequest('DELETE', `/api/employees/${id}`);
       return response;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/hours-bank"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/vacations"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/leaves"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hours-bank'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/vacations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/leaves'] });
       toast({
-        title: "Funcionário removido",
-        description: "O funcionário foi removido com sucesso.",
+        title: 'Funcionário removido',
+        description: 'O funcionário foi removido com sucesso.',
       });
     },
     onError: () => {
       toast({
-        title: "Erro",
-        description: "Não foi possível remover o funcionário.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const bulkDeleteMutation = useMutation({
-    mutationFn: async (ids: string[]) => {
-      const promises = ids.map(id => apiRequest("DELETE", `/api/employees/${id}`));
-      await Promise.all(promises);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/hours-bank"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/vacations"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/leaves"] });
-      setSelectedEmployees(new Set());
-      setShowBulkDeleteDialog(false);
-      toast({
-        title: "Funcionários removidos",
-        description: `${selectedEmployees.size} funcionário(s) removido(s) com sucesso.`,
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Erro",
-        description: "Não foi possível remover alguns funcionários.",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Não foi possível remover o funcionário.',
+        variant: 'destructive',
       });
     },
   });
@@ -138,52 +114,36 @@ export default function EmployeesList() {
     .filter((employee) => {
       const matchesSearch =
         employee.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        employee.registrationNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        employee.registrationNumber
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
         employee.position.toLowerCase().includes(searchQuery.toLowerCase());
 
       const hoursBalance = getEmployeeHoursBalance(employee.id);
       const matchesHours =
-        hoursFilter === "all" ||
-        (hoursFilter === "positive" && hoursBalance > 0) ||
-        (hoursFilter === "negative" && hoursBalance < 0) ||
-        (hoursFilter === "zero" && hoursBalance === 0);
+        hoursFilter === 'all' ||
+        (hoursFilter === 'positive' && hoursBalance > 0) ||
+        (hoursFilter === 'negative' && hoursBalance < 0) ||
+        (hoursFilter === 'zero' && hoursBalance === 0);
 
       return matchesSearch && matchesHours;
     })
     .sort((a, b) => {
-      if (sortBy === "name") {
-        return a.fullName.localeCompare(b.fullName, "pt-BR");
-      } else if (sortBy === "negative-hours") {
+      if (sortBy === 'name') {
+        return a.fullName.localeCompare(b.fullName, 'pt-BR');
+      } else if (sortBy === 'negative-hours') {
         const balanceA = getEmployeeHoursBalance(a.id);
         const balanceB = getEmployeeHoursBalance(b.id);
         return balanceA - balanceB;
-      } else if (sortBy === "positive-hours") {
+      } else if (sortBy === 'positive-hours') {
         const balanceA = getEmployeeHoursBalance(a.id);
         const balanceB = getEmployeeHoursBalance(b.id);
         return balanceB - balanceA;
-      } else if (sortBy === "position") {
-        return a.position.localeCompare(b.position, "pt-BR");
+      } else if (sortBy === 'position') {
+        return a.position.localeCompare(b.position, 'pt-BR');
       }
       return 0;
     });
-
-  const toggleSelectAll = () => {
-    if (selectedEmployees.size === filteredEmployees.length) {
-      setSelectedEmployees(new Set());
-    } else {
-      setSelectedEmployees(new Set(filteredEmployees.map(e => e.id)));
-    }
-  };
-
-  const toggleSelectEmployee = (id: string) => {
-    const newSelected = new Set(selectedEmployees);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedEmployees(newSelected);
-  };
 
   return (
     <div className="space-y-6">
@@ -224,7 +184,10 @@ export default function EmployeesList() {
                 />
               </div>
               <Select value={hoursFilter} onValueChange={setHoursFilter}>
-                <SelectTrigger className="w-full sm:w-48" data-testid="select-hours-filter">
+                <SelectTrigger
+                  className="w-full sm:w-48"
+                  data-testid="select-hours-filter"
+                >
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Filtrar por horas" />
                 </SelectTrigger>
@@ -236,13 +199,20 @@ export default function EmployeesList() {
                 </SelectContent>
               </Select>
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full sm:w-56" data-testid="select-sort-by">
+                <SelectTrigger
+                  className="w-full sm:w-56"
+                  data-testid="select-sort-by"
+                >
                   <SelectValue placeholder="Ordenar por" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="name">Nome (A-Z)</SelectItem>
-                  <SelectItem value="negative-hours">Banco de Horas Negativo</SelectItem>
-                  <SelectItem value="positive-hours">Banco de Horas Positivo</SelectItem>
+                  <SelectItem value="negative-hours">
+                    Banco de Horas Negativo
+                  </SelectItem>
+                  <SelectItem value="positive-hours">
+                    Banco de Horas Positivo
+                  </SelectItem>
                   <SelectItem value="position">Cargo</SelectItem>
                 </SelectContent>
               </Select>
@@ -256,16 +226,16 @@ export default function EmployeesList() {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
               <h3 className="text-lg font-medium">
-                {searchQuery || hoursFilter !== "all"
-                  ? "Nenhum funcionário encontrado"
-                  : "Nenhum funcionário cadastrado"}
+                {searchQuery || hoursFilter !== 'all'
+                  ? 'Nenhum funcionário encontrado'
+                  : 'Nenhum funcionário cadastrado'}
               </h3>
               <p className="text-sm text-muted-foreground mt-1 mb-4">
-                {searchQuery || hoursFilter !== "all"
-                  ? "Tente ajustar os filtros de busca"
-                  : "Comece adicionando seu primeiro funcionário"}
+                {searchQuery || hoursFilter !== 'all'
+                  ? 'Tente ajustar os filtros de busca'
+                  : 'Comece adicionando seu primeiro funcionário'}
               </p>
-              {!searchQuery && hoursFilter === "all" && (
+              {!searchQuery && hoursFilter === 'all' && (
                 <Link href="/employees/new">
                   <Button data-testid="button-add-first-employee">
                     <Plus className="h-4 w-4 mr-2" />
@@ -275,120 +245,49 @@ export default function EmployeesList() {
               )}
             </div>
           ) : (
-            <div className="space-y-4">
-              {selectedEmployees.size > 0 && (
-                <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
-                  <div className="flex items-center justify-between bg-muted p-4 rounded-lg">
-                    <p className="text-sm font-medium">
-                      {selectedEmployees.size} funcionário{selectedEmployees.size > 1 ? "s" : ""} selecionado{selectedEmployees.size > 1 ? "s" : ""}
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedEmployees(new Set())}
-                        data-testid="button-cancel-bulk-delete"
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome Completo</TableHead>
+                    <TableHead>Matrícula</TableHead>
+                    <TableHead>Cargo</TableHead>
+                    <TableHead className="text-center">
+                      Banco de Horas
+                    </TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredEmployees.map((employee) => {
+                    const hoursBalance = getEmployeeHoursBalance(employee.id);
+                    return (
+                      <TableRow
+                        key={employee.id}
+                        data-testid={`row-employee-${employee.id}`}
                       >
-                        Cancelar
-                      </Button>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          data-testid="button-start-bulk-delete"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Remover Selecionados
-                        </Button>
-                      </AlertDialogTrigger>
-                    </div>
-                  </div>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Remover Funcionários</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Tem certeza que deseja remover {selectedEmployees.size} funcionário{selectedEmployees.size > 1 ? "s" : ""}? Esta ação não pode ser desfeita e todos os dados relacionados serão perdidos.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => bulkDeleteMutation.mutate(Array.from(selectedEmployees))}
-                        disabled={bulkDeleteMutation.isPending}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        data-testid="button-confirm-bulk-delete"
-                      >
-                        {bulkDeleteMutation.isPending ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Removendo...
-                          </>
-                        ) : (
-                          "Remover"
-                        )}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">
-                        <Checkbox
-                          checked={selectedEmployees.size === filteredEmployees.length && filteredEmployees.length > 0}
-                          indeterminate={selectedEmployees.size > 0 && selectedEmployees.size < filteredEmployees.length}
-                          onCheckedChange={toggleSelectAll}
-                          data-testid="checkbox-select-all"
-                        />
-                      </TableHead>
-                      <TableHead>Nome Completo</TableHead>
-                      <TableHead>Matrícula</TableHead>
-                      <TableHead>Cargo</TableHead>
-                      <TableHead className="text-center">Banco de Horas</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredEmployees.map((employee) => {
-                      const hoursBalance = getEmployeeHoursBalance(employee.id);
-                      const isSelected = selectedEmployees.has(employee.id);
-                      return (
-                        <TableRow 
-                          key={employee.id} 
-                          data-testid={`row-employee-${employee.id}`}
-                          className={isSelected ? "bg-muted" : ""}
-                        >
-                          <TableCell className="w-12">
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => toggleSelectEmployee(employee.id)}
-                              data-testid={`checkbox-employee-${employee.id}`}
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            <Link
-                              href={`/employees/${employee.id}`}
-                              className="hover:underline"
-                              data-testid={`link-employee-${employee.id}`}
-                            >
-                              {employee.fullName}
-                            </Link>
-                          </TableCell>
+                        <TableCell className="font-medium">
+                          <Link
+                            href={`/employees/${employee.id}`}
+                            className="hover:underline"
+                            data-testid={`link-employee-${employee.id}`}
+                          >
+                            {employee.fullName}
+                          </Link>
+                        </TableCell>
                         <TableCell>{employee.registrationNumber}</TableCell>
                         <TableCell>{employee.position}</TableCell>
                         <TableCell className="text-center">
                           <Badge
                             variant={
                               hoursBalance < 0
-                                ? "destructive"
+                                ? 'destructive'
                                 : hoursBalance > 0
-                                ? "default"
-                                : "secondary"
+                                ? 'default'
+                                : 'secondary'
                             }
                           >
-                            {hoursBalance > 0 ? "+" : ""}
+                            {hoursBalance > 0 ? '+' : ''}
                             {minutesToHHMM(hoursBalance)}
                           </Badge>
                         </TableCell>
@@ -440,18 +339,24 @@ export default function EmployeesList() {
                               </Tooltip>
                               <AlertDialogContent>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Remover Funcionário</AlertDialogTitle>
+                                  <AlertDialogTitle>
+                                    Remover Funcionário
+                                  </AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Tem certeza que deseja remover{" "}
-                                    <strong>{employee.fullName}</strong>? Esta ação não pode
-                                    ser desfeita e todos os dados relacionados serão
-                                    perdidos.
+                                    Tem certeza que deseja remover{' '}
+                                    <strong>{employee.fullName}</strong>? Esta
+                                    ação não pode ser desfeita e todos os dados
+                                    relacionados serão perdidos.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogCancel>
+                                    Cancelar
+                                  </AlertDialogCancel>
                                   <AlertDialogAction
-                                    onClick={() => deleteMutation.mutate(employee.id)}
+                                    onClick={() =>
+                                      deleteMutation.mutate(employee.id)
+                                    }
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                     data-testid={`button-confirm-delete-${employee.id}`}
                                   >
@@ -461,13 +366,12 @@ export default function EmployeesList() {
                               </AlertDialogContent>
                             </AlertDialog>
                           </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>

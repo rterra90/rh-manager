@@ -148,15 +148,14 @@ function EmployeeTableSkeleton() {
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedSections, setExpandedSections] = useState({
-    vacationsAndLeaves: true,
+    onVacation: true,
+    upcomingVacations: true,
     paidDaysOff: true,
-    employees: true,
     employees: true,
   });
   const { toast } = useToast();
 
   const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
@@ -315,16 +314,8 @@ export default function Dashboard() {
       (a, b) =>
         new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
     );
-    .sort(
-      (a, b) =>
-        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
-    );
   const upcomingLeaves = leaves
     .filter((l) => isDateInNext3Months(l.startDate))
-    .sort(
-      (a, b) =>
-        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
-    );
     .sort(
       (a, b) =>
         new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
@@ -332,16 +323,11 @@ export default function Dashboard() {
 
   const employeesWithNegativeBalance = employees.filter(
     (e) => getEmployeeHoursBalance(e.id) < 0,
-    (e) => getEmployeeHoursBalance(e.id) < 0,
   ).length;
 
   const filteredEmployees = employees.filter(
     (employee) =>
       employee.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.registrationNumber
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      employee.position.toLowerCase().includes(searchQuery.toLowerCase()),
       employee.registrationNumber
         .toLowerCase()
         .includes(searchQuery.toLowerCase()) ||
@@ -355,15 +341,9 @@ export default function Dashboard() {
 
   const sevenDaysLater = new Date(today);
   sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
-  const sevenDaysLaterString = sevenDaysLater.toISOString().split("T")[0];
+  const sevenDaysLaterString = sevenDaysLater.toISOString().split('T')[0];
 
   const paidDaysOffToday = paidDaysOff
-    .filter((p) => p.date === todayString)
-    .map((p) => ({
-      ...p,
-      employee: employees.find((e) => e.id === p.employeeId),
-    }))
-    .filter((p) => p.employee)
     .filter((p) => p.date === todayString)
     .map((p) => ({
       ...p,
@@ -373,12 +353,6 @@ export default function Dashboard() {
     .sort((a, b) => a.employee!.fullName.localeCompare(b.employee!.fullName));
 
   const paidDaysOffNext7Days = paidDaysOff
-    .filter((p) => p.date > todayString && p.date <= sevenDaysLaterString)
-    .map((p) => ({
-      ...p,
-      employee: employees.find((e) => e.id === p.employeeId),
-    }))
-    .filter((p) => p.employee)
     .filter((p) => p.date > todayString && p.date <= sevenDaysLaterString)
     .map((p) => ({
       ...p,
@@ -501,22 +475,12 @@ export default function Dashboard() {
                               key={p.id}
                               data-testid={`row-paid-day-off-today-${p.id}`}
                             >
-                            <TableRow
-                              key={p.id}
-                              data-testid={`row-paid-day-off-today-${p.id}`}
-                            >
                               <TableCell>
                                 <Link href={`/employees/${p.employeeId}`}>
                                   <p className="font-medium text-primary hover:underline cursor-pointer">
                                     {p.employee?.fullName}
                                   </p>
-                                  <p className="font-medium text-primary hover:underline cursor-pointer">
-                                    {p.employee?.fullName}
-                                  </p>
                                 </Link>
-                              </TableCell>
-                              <TableCell>
-                                {p.employee?.registrationNumber}
                               </TableCell>
                               <TableCell>
                                 {p.employee?.registrationNumber}
@@ -556,25 +520,12 @@ export default function Dashboard() {
                               <TableCell className="font-medium">
                                 {formatDate(p.date)}
                               </TableCell>
-                            <TableRow
-                              key={p.id}
-                              data-testid={`row-paid-day-off-next7-${p.id}`}
-                            >
-                              <TableCell className="font-medium">
-                                {formatDate(p.date)}
-                              </TableCell>
                               <TableCell>
                                 <Link href={`/employees/${p.employeeId}`}>
                                   <p className="font-medium text-primary hover:underline cursor-pointer">
                                     {p.employee?.fullName}
                                   </p>
-                                  <p className="font-medium text-primary hover:underline cursor-pointer">
-                                    {p.employee?.fullName}
-                                  </p>
                                 </Link>
-                              </TableCell>
-                              <TableCell>
-                                {p.employee?.registrationNumber}
                               </TableCell>
                               <TableCell>
                                 {p.employee?.registrationNumber}
@@ -602,13 +553,11 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {(employeesOnVacation.length > 0 ||
-        upcomingVacations.length > 0 ||
-        upcomingLeaves.length > 0) && (
+      {employeesOnVacation.length > 0 && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-2">
-              <CardTitle>Férias e Licença prêmio</CardTitle>
+              <CardTitle>Funcionários em Férias/Licença Hoje</CardTitle>
               <Button
                 variant="ghost"
                 size="icon"
@@ -624,7 +573,7 @@ export default function Dashboard() {
               </Button>
             </div>
           </CardHeader>
-          {expandedSections.vacationsAndLeaves ? (
+          {expandedSections.onVacation ? (
             <CardContent>
               <div className="space-y-2">
                 {employeesOnVacation.map(({ employee, periods }) => (
