@@ -24,7 +24,7 @@ import {
  */
 export async function initDB(): Promise<Database> {
   return open({
-    filename: './database.sqlite',
+    filename: './data/database.sqlite',
     driver: sqlite3.Database,
   });
 }
