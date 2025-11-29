@@ -1,6 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Users, Clock, Palmtree, AlertTriangle, Plus, Search, Eye, Pencil, Trash2, Check, X, ChevronDown, Award } from "lucide-react";
+import {
+  Users,
+  Clock,
+  Palmtree,
+  AlertTriangle,
+  Plus,
+  Search,
+  Eye,
+  Pencil,
+  Trash2,
+  Check,
+  X,
+  ChevronDown,
+  Award,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BulkImportDialog } from "@/components/bulk-import-dialog";
@@ -31,7 +45,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import type { Employee, HoursBank, VacationPeriod, LeavePeriod, PaidDayOff } from "@shared/schema";
+import type {
+  Employee,
+  HoursBank,
+  VacationPeriod,
+  LeavePeriod,
+  PaidDayOff,
+} from "@shared/schema";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -62,7 +82,13 @@ interface StatsCardProps {
   variant?: "default" | "warning" | "success";
 }
 
-function StatsCard({ title, value, description, icon: Icon, variant = "default" }: StatsCardProps) {
+function StatsCard({
+  title,
+  value,
+  description,
+  icon: Icon,
+  variant = "default",
+}: StatsCardProps) {
   const variantStyles = {
     default: "bg-primary/10 text-primary",
     warning: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
@@ -121,23 +147,29 @@ export default function Dashboard() {
   const [expandedSections, setExpandedSections] = useState({
     vacationsAndLeaves: true,
     paidDaysOff: true,
-    employees: true
+    employees: true,
   });
   const { toast } = useToast();
 
   const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
-  const { data: employees = [], isLoading: loadingEmployees } = useQuery<Employee[]>({
+  const { data: employees = [], isLoading: loadingEmployees } = useQuery<
+    Employee[]
+  >({
     queryKey: ["/api/employees"],
   });
 
-  const { data: hoursBank = [], isLoading: loadingHours } = useQuery<HoursBank[]>({
+  const { data: hoursBank = [], isLoading: loadingHours } = useQuery<
+    HoursBank[]
+  >({
     queryKey: ["/api/hours-bank"],
   });
 
-  const { data: vacations = [], isLoading: loadingVacations } = useQuery<VacationPeriod[]>({
+  const { data: vacations = [], isLoading: loadingVacations } = useQuery<
+    VacationPeriod[]
+  >({
     queryKey: ["/api/vacations"],
   });
 
@@ -174,8 +206,17 @@ export default function Dashboard() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: async ({ id, type, status }: { id: string; type: "vacation" | "leave"; status: "approved" | "rejected" }) => {
-      const endpoint = type === "vacation" ? `/api/vacations/${id}` : `/api/leaves/${id}`;
+    mutationFn: async ({
+      id,
+      type,
+      status,
+    }: {
+      id: string;
+      type: "vacation" | "leave";
+      status: "approved" | "rejected";
+    }) => {
+      const endpoint =
+        type === "vacation" ? `/api/vacations/${id}` : `/api/leaves/${id}`;
       const response = await apiRequest("PATCH", endpoint, { status });
       return await response.json();
     },
@@ -224,60 +265,96 @@ export default function Dashboard() {
   const employeesOnVacation = employees
     .filter((e) => {
       const employeeVacations = vacations.filter(
-        (v) => v.employeeId === e.id && (v.status === "approved" || v.status === "pending") && isDateRangeActive(v.startDate, v.endDate)
+        (v) =>
+          v.employeeId === e.id &&
+          (v.status === "approved" || v.status === "pending") &&
+          isDateRangeActive(v.startDate, v.endDate),
       );
       const employeeLeaves = leaves.filter(
-        (l) => l.employeeId === e.id && (l.status === "approved" || l.status === "pending") && isDateRangeActive(l.startDate, l.endDate)
+        (l) =>
+          l.employeeId === e.id &&
+          (l.status === "approved" || l.status === "pending") &&
+          isDateRangeActive(l.startDate, l.endDate),
       );
       return employeeVacations.length > 0 || employeeLeaves.length > 0;
     })
     .map((e) => ({
       employee: e,
       periods: [
-        ...vacations.filter((v) => v.employeeId === e.id && (v.status === "approved" || v.status === "pending") && isDateRangeActive(v.startDate, v.endDate)).map(v => ({ ...v, type: "vacation" })),
-        ...leaves.filter((l) => l.employeeId === e.id && (l.status === "approved" || l.status === "pending") && isDateRangeActive(l.startDate, l.endDate)).map(l => ({ ...l, type: "leave" }))
-      ]
+        ...vacations
+          .filter(
+            (v) =>
+              v.employeeId === e.id &&
+              (v.status === "approved" || v.status === "pending") &&
+              isDateRangeActive(v.startDate, v.endDate),
+          )
+          .map((v) => ({ ...v, type: "vacation" })),
+        ...leaves
+          .filter(
+            (l) =>
+              l.employeeId === e.id &&
+              (l.status === "approved" || l.status === "pending") &&
+              isDateRangeActive(l.startDate, l.endDate),
+          )
+          .map((l) => ({ ...l, type: "leave" })),
+      ],
     }));
 
-  const pendingVacations = vacations.filter((v) => v.status === "pending").length;
+  const pendingVacations = vacations.filter(
+    (v) => v.status === "pending",
+  ).length;
   const pendingLeaves = leaves.filter((l) => l.status === "pending").length;
   const upcomingVacations = vacations
     .filter((v) => isDateInNext3Months(v.startDate))
-    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    .sort(
+      (a, b) =>
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+    );
   const upcomingLeaves = leaves
     .filter((l) => isDateInNext3Months(l.startDate))
-    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    .sort(
+      (a, b) =>
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+    );
 
   const employeesWithNegativeBalance = employees.filter(
-    (e) => getEmployeeHoursBalance(e.id) < 0
+    (e) => getEmployeeHoursBalance(e.id) < 0,
   ).length;
 
   const filteredEmployees = employees.filter(
     (employee) =>
       employee.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.registrationNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.position.toLowerCase().includes(searchQuery.toLowerCase())
+      employee.registrationNumber
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      employee.position.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   // Paid days off logic
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const todayString = today.toISOString().split('T')[0];
-  
+  const todayString = today.toISOString().split("T")[0];
+
   const sevenDaysLater = new Date(today);
   sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
-  const sevenDaysLaterString = sevenDaysLater.toISOString().split('T')[0];
+  const sevenDaysLaterString = sevenDaysLater.toISOString().split("T")[0];
 
   const paidDaysOffToday = paidDaysOff
-    .filter(p => p.date === todayString)
-    .map(p => ({ ...p, employee: employees.find(e => e.id === p.employeeId) }))
-    .filter(p => p.employee)
+    .filter((p) => p.date === todayString)
+    .map((p) => ({
+      ...p,
+      employee: employees.find((e) => e.id === p.employeeId),
+    }))
+    .filter((p) => p.employee)
     .sort((a, b) => a.employee!.fullName.localeCompare(b.employee!.fullName));
 
   const paidDaysOffNext7Days = paidDaysOff
-    .filter(p => p.date > todayString && p.date <= sevenDaysLaterString)
-    .map(p => ({ ...p, employee: employees.find(e => e.id === p.employeeId) }))
-    .filter(p => p.employee)
+    .filter((p) => p.date > todayString && p.date <= sevenDaysLaterString)
+    .map((p) => ({
+      ...p,
+      employee: employees.find((e) => e.id === p.employeeId),
+    }))
+    .filter((p) => p.employee)
     .sort((a, b) => {
       const dateCompare = a.date.localeCompare(b.date);
       if (dateCompare !== 0) return dateCompare;
@@ -388,13 +465,20 @@ export default function Dashboard() {
                         </TableHeader>
                         <TableBody>
                           {paidDaysOffToday.map((p) => (
-                            <TableRow key={p.id} data-testid={`row-paid-day-off-today-${p.id}`}>
+                            <TableRow
+                              key={p.id}
+                              data-testid={`row-paid-day-off-today-${p.id}`}
+                            >
                               <TableCell>
                                 <Link href={`/employees/${p.employeeId}`}>
-                                  <p className="font-medium text-primary hover:underline cursor-pointer">{p.employee?.fullName}</p>
+                                  <p className="font-medium text-primary hover:underline cursor-pointer">
+                                    {p.employee?.fullName}
+                                  </p>
                                 </Link>
                               </TableCell>
-                              <TableCell>{p.employee?.registrationNumber}</TableCell>
+                              <TableCell>
+                                {p.employee?.registrationNumber}
+                              </TableCell>
                               <TableCell className="text-center">
                                 <Badge>{minutesToHHMM(p.hours)}</Badge>
                               </TableCell>
@@ -423,14 +507,23 @@ export default function Dashboard() {
                         </TableHeader>
                         <TableBody>
                           {paidDaysOffNext7Days.map((p) => (
-                            <TableRow key={p.id} data-testid={`row-paid-day-off-next7-${p.id}`}>
-                              <TableCell className="font-medium">{formatDate(p.date)}</TableCell>
+                            <TableRow
+                              key={p.id}
+                              data-testid={`row-paid-day-off-next7-${p.id}`}
+                            >
+                              <TableCell className="font-medium">
+                                {formatDate(p.date)}
+                              </TableCell>
                               <TableCell>
                                 <Link href={`/employees/${p.employeeId}`}>
-                                  <p className="font-medium text-primary hover:underline cursor-pointer">{p.employee?.fullName}</p>
+                                  <p className="font-medium text-primary hover:underline cursor-pointer">
+                                    {p.employee?.fullName}
+                                  </p>
                                 </Link>
                               </TableCell>
-                              <TableCell>{p.employee?.registrationNumber}</TableCell>
+                              <TableCell>
+                                {p.employee?.registrationNumber}
+                              </TableCell>
                               <TableCell className="text-center">
                                 <Badge>{minutesToHHMM(p.hours)}</Badge>
                               </TableCell>
@@ -446,18 +539,21 @@ export default function Dashboard() {
           ) : (
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                {totalPaidDaysOffToday} hoje, {totalPaidDaysOffNext7Days} próximos 7 dias
+                {totalPaidDaysOffToday} hoje, {totalPaidDaysOffNext7Days}{" "}
+                próximos 7 dias
               </p>
             </CardContent>
           )}
         </Card>
       )}
 
-      {(employeesOnVacation.length > 0 || upcomingVacations.length > 0 || upcomingLeaves.length > 0) && (
+      {(employeesOnVacation.length > 0 ||
+        upcomingVacations.length > 0 ||
+        upcomingLeaves.length > 0) && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-2">
-              <CardTitle>Férias e Licenças</CardTitle>
+              <CardTitle>Férias e Licença prêmio</CardTitle>
               <Button
                 variant="ghost"
                 size="icon"
@@ -482,22 +578,44 @@ export default function Dashboard() {
                     </h3>
                     <div className="space-y-2">
                       {employeesOnVacation.map(({ employee, periods }) => (
-                        <div key={employee.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`card-on-vacation-${employee.id}`}>
+                        <div
+                          key={employee.id}
+                          className="flex items-center justify-between p-3 border rounded-lg"
+                          data-testid={`card-on-vacation-${employee.id}`}
+                        >
                           <div className="flex-1">
                             <Link href={`/employees/${employee.id}`}>
-                              <p className="font-medium text-primary hover:underline cursor-pointer">{employee.fullName}</p>
+                              <p className="font-medium text-primary hover:underline cursor-pointer">
+                                {employee.fullName}
+                              </p>
                             </Link>
                             <p className="text-sm text-muted-foreground">
-                              {periods.map(p => p.type === "vacation" ? "Férias" : "Licença-Prêmio").join(" + ")}
+                              {periods
+                                .map((p) =>
+                                  p.type === "vacation"
+                                    ? "Férias"
+                                    : "Licença-Prêmio",
+                                )
+                                .join(" + ")}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              Término: <span className="font-medium">{formatDate(periods[0].endDate)}</span>
+                              Término:{" "}
+                              <span className="font-medium">
+                                {formatDate(periods[0].endDate)}
+                              </span>
                             </p>
                           </div>
                           <div className="flex gap-2">
                             {periods.map((p) => (
-                              <Badge key={p.id} variant={p.status === "pending" ? "outline" : "default"}>
-                                {p.status === "pending" ? "Pendente" : "Aprovado"}
+                              <Badge
+                                key={p.id}
+                                variant={
+                                  p.status === "pending" ? "outline" : "default"
+                                }
+                              >
+                                {p.status === "pending"
+                                  ? "Pendente"
+                                  : "Aprovado"}
                               </Badge>
                             ))}
                           </div>
@@ -506,7 +624,8 @@ export default function Dashboard() {
                     </div>
                   </div>
                 )}
-                {(upcomingVacations.length > 0 || upcomingLeaves.length > 0) && (
+                {(upcomingVacations.length > 0 ||
+                  upcomingLeaves.length > 0) && (
                   <div>
                     <h3 className="font-semibold mb-3 flex items-center gap-2">
                       <Palmtree className="h-4 w-4" />
@@ -514,22 +633,51 @@ export default function Dashboard() {
                     </h3>
                     <div className="space-y-2">
                       {upcomingVacations.map((v) => (
-                        <div key={v.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`card-vacation-${v.id}`}>
+                        <div
+                          key={v.id}
+                          className="flex items-center justify-between p-3 border rounded-lg"
+                          data-testid={`card-vacation-${v.id}`}
+                        >
                           <div className="flex-1">
-                            <p className="font-medium">{getEmployeeNameById(v.employeeId)}</p>
-                            <p className="text-sm text-muted-foreground">{formatDate(v.startDate)} até {formatDate(v.endDate)}</p>
-                            {v.notes && <p className="text-sm mt-1">{v.notes}</p>}
+                            <p className="font-medium">
+                              {getEmployeeNameById(v.employeeId)}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {formatDate(v.startDate)} até{" "}
+                              {formatDate(v.endDate)}
+                            </p>
+                            {v.notes && (
+                              <p className="text-sm mt-1">{v.notes}</p>
+                            )}
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge variant={v.status === "pending" ? "outline" : v.status === "approved" ? "default" : "destructive"}>
-                              {v.status === "pending" ? "Pendente" : v.status === "approved" ? "Lançado no sistema" : "Rejeitado"}
+                            <Badge
+                              variant={
+                                v.status === "pending"
+                                  ? "outline"
+                                  : v.status === "approved"
+                                    ? "default"
+                                    : "destructive"
+                              }
+                            >
+                              {v.status === "pending"
+                                ? "Pendente"
+                                : v.status === "approved"
+                                  ? "Lançado no sistema"
+                                  : "Rejeitado"}
                             </Badge>
                             {v.status === "pending" && (
                               <div className="flex gap-1">
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  onClick={() => approveMutation.mutate({ id: v.id, type: "vacation", status: "approved" })}
+                                  onClick={() =>
+                                    approveMutation.mutate({
+                                      id: v.id,
+                                      type: "vacation",
+                                      status: "approved",
+                                    })
+                                  }
                                   disabled={approveMutation.isPending}
                                   data-testid={`button-approve-vacation-${v.id}`}
                                 >
@@ -538,7 +686,13 @@ export default function Dashboard() {
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  onClick={() => approveMutation.mutate({ id: v.id, type: "vacation", status: "rejected" })}
+                                  onClick={() =>
+                                    approveMutation.mutate({
+                                      id: v.id,
+                                      type: "vacation",
+                                      status: "rejected",
+                                    })
+                                  }
                                   disabled={approveMutation.isPending}
                                   data-testid={`button-reject-vacation-${v.id}`}
                                 >
@@ -550,22 +704,51 @@ export default function Dashboard() {
                         </div>
                       ))}
                       {upcomingLeaves.map((l) => (
-                        <div key={l.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`card-leave-${l.id}`}>
+                        <div
+                          key={l.id}
+                          className="flex items-center justify-between p-3 border rounded-lg"
+                          data-testid={`card-leave-${l.id}`}
+                        >
                           <div className="flex-1">
-                            <p className="font-medium">{getEmployeeNameById(l.employeeId)}</p>
-                            <p className="text-sm text-muted-foreground">{formatDate(l.startDate)} até {formatDate(l.endDate)}</p>
-                            {l.notes && <p className="text-sm mt-1">{l.notes}</p>}
+                            <p className="font-medium">
+                              {getEmployeeNameById(l.employeeId)}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {formatDate(l.startDate)} até{" "}
+                              {formatDate(l.endDate)}
+                            </p>
+                            {l.notes && (
+                              <p className="text-sm mt-1">{l.notes}</p>
+                            )}
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge variant={l.status === "pending" ? "outline" : l.status === "approved" ? "default" : "destructive"}>
-                              {l.status === "pending" ? "Pendente" : l.status === "approved" ? "Lançado no sistema" : "Rejeitado"}
+                            <Badge
+                              variant={
+                                l.status === "pending"
+                                  ? "outline"
+                                  : l.status === "approved"
+                                    ? "default"
+                                    : "destructive"
+                              }
+                            >
+                              {l.status === "pending"
+                                ? "Pendente"
+                                : l.status === "approved"
+                                  ? "Lançado no sistema"
+                                  : "Rejeitado"}
                             </Badge>
                             {l.status === "pending" && (
                               <div className="flex gap-1">
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  onClick={() => approveMutation.mutate({ id: l.id, type: "leave", status: "approved" })}
+                                  onClick={() =>
+                                    approveMutation.mutate({
+                                      id: l.id,
+                                      type: "leave",
+                                      status: "approved",
+                                    })
+                                  }
                                   disabled={approveMutation.isPending}
                                   data-testid={`button-approve-leave-${l.id}`}
                                 >
@@ -574,7 +757,13 @@ export default function Dashboard() {
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  onClick={() => approveMutation.mutate({ id: l.id, type: "leave", status: "rejected" })}
+                                  onClick={() =>
+                                    approveMutation.mutate({
+                                      id: l.id,
+                                      type: "leave",
+                                      status: "rejected",
+                                    })
+                                  }
                                   disabled={approveMutation.isPending}
                                   data-testid={`button-reject-leave-${l.id}`}
                                 >
@@ -593,7 +782,9 @@ export default function Dashboard() {
           ) : (
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                {employeesOnVacation.length} hoje • {upcomingVacations.length + upcomingLeaves.length} próximos 3 meses
+                {employeesOnVacation.length} hoje •{" "}
+                {upcomingVacations.length + upcomingLeaves.length} próximos 3
+                meses
               </p>
             </CardContent>
           )}
@@ -631,140 +822,165 @@ export default function Dashboard() {
         </CardHeader>
         {expandedSections.employees ? (
           <CardContent>
-          {loadingEmployees ? (
-            <EmployeeTableSkeleton />
-          ) : filteredEmployees.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium">
-                {searchQuery ? "Nenhum funcionário encontrado" : "Nenhum funcionário cadastrado"}
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1 mb-4">
-                {searchQuery
-                  ? "Tente buscar com outros termos"
-                  : "Comece adicionando seu primeiro funcionário"}
-              </p>
-              {!searchQuery && (
-                <Link href="/employees/new">
-                  <Button data-testid="button-add-first-employee">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Adicionar Funcionário
-                  </Button>
-                </Link>
-              )}
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Matrícula</TableHead>
-                    <TableHead>Cargo</TableHead>
-                    <TableHead className="text-center">Banco de Horas</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredEmployees.map((employee) => {
-                    const hoursBalance = getEmployeeHoursBalance(employee.id);
-                    return (
-                      <TableRow key={employee.id} data-testid={`row-employee-${employee.id}`}>
-                        <TableCell className="font-medium">
-                          <Link href={`/employees/${employee.id}`}>
-                            <span className="text-primary hover:underline cursor-pointer">{employee.fullName}</span>
-                          </Link>
-                        </TableCell>
-                        <TableCell>{employee.registrationNumber}</TableCell>
-                        <TableCell>{employee.position}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant={hoursBalance < 0 ? "destructive" : hoursBalance > 0 ? "default" : "secondary"}
-                          >
-                            {hoursBalance > 0 ? "+" : ""}
-                            {minutesToHHMM(hoursBalance)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Link href={`/employees/${employee.id}`}>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    data-testid={`button-view-${employee.id}`}
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                </Link>
-                              </TooltipTrigger>
-                              <TooltipContent>Ver detalhes</TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Link href={`/employees/${employee.id}/edit`}>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    data-testid={`button-edit-${employee.id}`}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                </Link>
-                              </TooltipTrigger>
-                              <TooltipContent>Editar</TooltipContent>
-                            </Tooltip>
-                            <AlertDialog>
+            {loadingEmployees ? (
+              <EmployeeTableSkeleton />
+            ) : filteredEmployees.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium">
+                  {searchQuery
+                    ? "Nenhum funcionário encontrado"
+                    : "Nenhum funcionário cadastrado"}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1 mb-4">
+                  {searchQuery
+                    ? "Tente buscar com outros termos"
+                    : "Comece adicionando seu primeiro funcionário"}
+                </p>
+                {!searchQuery && (
+                  <Link href="/employees/new">
+                    <Button data-testid="button-add-first-employee">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar Funcionário
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Matrícula</TableHead>
+                      <TableHead>Cargo</TableHead>
+                      <TableHead className="text-center">
+                        Banco de Horas
+                      </TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredEmployees.map((employee) => {
+                      const hoursBalance = getEmployeeHoursBalance(employee.id);
+                      return (
+                        <TableRow
+                          key={employee.id}
+                          data-testid={`row-employee-${employee.id}`}
+                        >
+                          <TableCell className="font-medium">
+                            <Link href={`/employees/${employee.id}`}>
+                              <span className="text-primary hover:underline cursor-pointer">
+                                {employee.fullName}
+                              </span>
+                            </Link>
+                          </TableCell>
+                          <TableCell>{employee.registrationNumber}</TableCell>
+                          <TableCell>{employee.position}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge
+                              variant={
+                                hoursBalance < 0
+                                  ? "destructive"
+                                  : hoursBalance > 0
+                                    ? "default"
+                                    : "secondary"
+                              }
+                            >
+                              {hoursBalance > 0 ? "+" : ""}
+                              {minutesToHHMM(hoursBalance)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <AlertDialogTrigger asChild>
+                                  <Link href={`/employees/${employee.id}`}>
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="text-destructive hover:text-destructive"
-                                      data-testid={`button-delete-${employee.id}`}
+                                      data-testid={`button-view-${employee.id}`}
                                     >
-                                      <Trash2 className="h-4 w-4" />
+                                      <Eye className="h-4 w-4" />
                                     </Button>
-                                  </AlertDialogTrigger>
+                                  </Link>
                                 </TooltipTrigger>
-                                <TooltipContent>Remover</TooltipContent>
+                                <TooltipContent>Ver detalhes</TooltipContent>
                               </Tooltip>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Remover Funcionário</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Tem certeza que deseja remover <strong>{employee.fullName}</strong>?
-                                    Esta ação não pode ser desfeita e todos os dados relacionados serão perdidos.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => deleteMutation.mutate(employee.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    data-testid={`button-confirm-delete-${employee.id}`}
-                                  >
-                                    Remover
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Link href={`/employees/${employee.id}/edit`}>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      data-testid={`button-edit-${employee.id}`}
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                  </Link>
+                                </TooltipTrigger>
+                                <TooltipContent>Editar</TooltipContent>
+                              </Tooltip>
+                              <AlertDialog>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-destructive hover:text-destructive"
+                                        data-testid={`button-delete-${employee.id}`}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Remover</TooltipContent>
+                                </Tooltip>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Remover Funcionário
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Tem certeza que deseja remover{" "}
+                                      <strong>{employee.fullName}</strong>? Esta
+                                      ação não pode ser desfeita e todos os
+                                      dados relacionados serão perdidos.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancelar
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() =>
+                                        deleteMutation.mutate(employee.id)
+                                      }
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      data-testid={`button-confirm-delete-${employee.id}`}
+                                    >
+                                      Remover
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
         ) : (
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              {filteredEmployees.length} funcionário{filteredEmployees.length > 1 ? "s" : ""} cadastrado{filteredEmployees.length > 1 ? "s" : ""}
+              {filteredEmployees.length} funcionário
+              {filteredEmployees.length > 1 ? "s" : ""} cadastrado
+              {filteredEmployees.length > 1 ? "s" : ""}
             </p>
           </CardContent>
         )}
