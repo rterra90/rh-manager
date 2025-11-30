@@ -158,35 +158,12 @@ function hhmmToMinutes(hhmmStr: string): number {
   return isNegative ? -totalMinutes : totalMinutes;
 }
 
-function maskHHMMInput(value: string, allowNegative: boolean = false): string {
-  if (!value) return "";
-
-  const isNegative = value.startsWith("-");
-  const sign = allowNegative && isNegative ? "-" : "";
-  
-  // Remove tudo exceto dígitos e ":"
-  let cleaned = value.replace(/[^\d:]/g, "");
-  
-  // Se começa com ":", remove
-  if (cleaned.startsWith(":")) {
-    cleaned = cleaned.substring(1);
-  }
-  
-  // Limita a 4 dígitos
-  const digits = cleaned.replace(/:/g, "").substring(0, 4);
-  
-  if (!digits) return sign;
-  
-  // Formata como HH:MM
-  if (digits.length <= 2) {
-    return sign + digits;
-  } else if (digits.length <= 4) {
-    const hh = digits.substring(0, digits.length - 2).padStart(2, "0");
-    const mm = digits.substring(digits.length - 2);
-    return sign + hh + ":" + mm;
-  }
-  
-  return sign;
+function isValidHHMM(value: string, allowNegative: boolean = false): boolean {
+  if (!value) return false;
+  const pattern = allowNegative ? /^-?\d{1,2}:\d{2}$/ : /^\d{1,2}:\d{2}$/;
+  if (!pattern.test(value)) return false;
+  const [hh, mm] = value.replace(/^-/, "").split(":");
+  return parseInt(mm) < 60;
 }
 
 interface PaidDayOffFormProps {
@@ -228,6 +205,15 @@ function PaidDayOffForm({ employeeId, onSuccess }: PaidDayOffFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!date || !hours) return;
+    
+    if (!isValidHHMM(hours, false)) {
+      toast({
+        title: "Formato inválido",
+        description: "Use o formato HH:MM (ex: 08:00)",
+        variant: "destructive",
+      });
+      return;
+    }
     
     const minutes = hhmmToMinutes(hours);
     if (minutes === 0) return;
@@ -299,9 +285,9 @@ function PaidDayOffForm({ employeeId, onSuccess }: PaidDayOffFormProps) {
             <Input
               id="dayOffHours"
               type="text"
-              placeholder="Ex: 08:00"
+              placeholder="Ex: 08:00 (formato HH:MM)"
               value={hours}
-              onChange={(e) => setHours(maskHHMMInput(e.target.value, false))}
+              onChange={(e) => setHours(e.target.value)}
               required
               data-testid="input-paid-day-off-hours"
             />
@@ -401,6 +387,16 @@ function HoursBankForm({ employeeId, onSuccess }: HoursBankFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!isValidHHMM(hours, true)) {
+      toast({
+        title: "Formato inválido",
+        description: "Use o formato HH:MM ou -HH:MM (ex: 08:30 ou -02:15)",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const minutes = hhmmToMinutes(hours);
     if (minutes === 0 && hours !== "0:00" && hours !== "-0:00") return;
 
@@ -469,9 +465,9 @@ function HoursBankForm({ employeeId, onSuccess }: HoursBankFormProps) {
             <Input
               id="hours"
               type="text"
-              placeholder="Ex: 08:30 ou -04:15"
+              placeholder="Ex: 08:30 ou -04:15 (formato HH:MM)"
               value={hours}
-              onChange={(e) => setHours(maskHHMMInput(e.target.value, true))}
+              onChange={(e) => setHours(e.target.value)}
               required
               data-testid="input-hours"
             />

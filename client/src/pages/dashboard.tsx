@@ -856,16 +856,11 @@ export default function Dashboard() {
                       <TableHead>Nome</TableHead>
                       <TableHead>Matrícula</TableHead>
                       <TableHead>Cargo</TableHead>
-                      <TableHead className="text-center">
-                        Banco de Horas
-                      </TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredEmployees.map((employee) => {
-                      const hoursBalance = getEmployeeHoursBalance(employee.id);
-                      return (
+                    {filteredEmployees.map((employee) => (
                         <TableRow
                           key={employee.id}
                           data-testid={`row-employee-${employee.id}`}
@@ -879,20 +874,6 @@ export default function Dashboard() {
                           </TableCell>
                           <TableCell>{employee.registrationNumber}</TableCell>
                           <TableCell>{employee.position}</TableCell>
-                          <TableCell className="text-center">
-                            <Badge
-                              variant={
-                                hoursBalance < 0
-                                  ? "destructive"
-                                  : hoursBalance > 0
-                                    ? "default"
-                                    : "secondary"
-                              }
-                            >
-                              {hoursBalance > 0 ? "+" : ""}
-                              {minutesToHHMM(hoursBalance)}
-                            </Badge>
-                          </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
                               <Tooltip>
@@ -970,8 +951,8 @@ export default function Dashboard() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      );
-                    })}
+                      ))}
+
                   </TableBody>
                 </Table>
               </div>
