@@ -782,12 +782,18 @@ export default function EmployeeDetail() {
 
   // Year carousel logic
   const yearsList = useMemo(() => {
-    if (employeePaidDaysOff.length === 0) return [];
+    if (employeePaidDaysOff.length === 0) return [currentYear];
     const years = employeePaidDaysOff.map(d => d.year);
     const minYear = Math.min(...years);
     const maxYear = Math.max(...years);
-    return Array.from({ length: maxYear - minYear + 1 }, (_, i) => minYear + i);
-  }, [employeePaidDaysOff]);
+    const allYears = Array.from({ length: maxYear - minYear + 1 }, (_, i) => minYear + i);
+    // Ensure current year is included
+    if (!allYears.includes(currentYear)) {
+      allYears.push(currentYear);
+      allYears.sort((a, b) => a - b);
+    }
+    return allYears;
+  }, [employeePaidDaysOff, currentYear]);
 
   // Initialize carousel to current year
   useEffect(() => {
