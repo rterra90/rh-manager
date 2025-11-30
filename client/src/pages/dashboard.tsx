@@ -311,7 +311,7 @@ export default function Dashboard() {
         new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
     );
   const upcomingLeaves = leaves
-    .filter((l) => isDateInNext3Months(l.startDate))
+    .filter((l) => isDateInNext3Months(l.startDate) && !isDateRangeActive(l.startDate, l.endDate))
     .sort(
       (a, b) =>
         new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
@@ -459,7 +459,7 @@ export default function Dashboard() {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Funcionário</TableHead>
-                            <TableHead>Matrícula</TableHead>
+                            <TableHead>Cargo</TableHead>
                             <TableHead className="text-center">Horas</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -477,7 +477,7 @@ export default function Dashboard() {
                                 </Link>
                               </TableCell>
                               <TableCell>
-                                {p.employee?.registrationNumber}
+                                {p.employee?.position}
                               </TableCell>
                               <TableCell className="text-center">
                                 <Badge>{minutesToHHMM(p.hours)}</Badge>
@@ -501,7 +501,7 @@ export default function Dashboard() {
                           <TableRow>
                             <TableHead>Data</TableHead>
                             <TableHead>Funcionário</TableHead>
-                            <TableHead>Matrícula</TableHead>
+                            <TableHead>Cargo</TableHead>
                             <TableHead className="text-center">Horas</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -522,7 +522,7 @@ export default function Dashboard() {
                                 </Link>
                               </TableCell>
                               <TableCell>
-                                {p.employee?.registrationNumber}
+                                {p.employee?.position}
                               </TableCell>
                               <TableCell className="text-center">
                                 <Badge>{minutesToHHMM(p.hours)}</Badge>
@@ -586,7 +586,7 @@ export default function Dashboard() {
                           <div className="flex-1">
                             <Link href={`/employees/${employee.id}`}>
                               <p className="font-medium text-primary hover:underline cursor-pointer">
-                                {employee.fullName}
+                                {employee.fullName} <span className="text-sm text-muted-foreground">— {employee.position}</span>
                               </p>
                             </Link>
                             <p className="text-sm text-muted-foreground">
@@ -641,7 +641,7 @@ export default function Dashboard() {
                           <div className="flex-1">
                             <Link href={`/employees/${v.employeeId}`}>
                               <p className="font-medium">
-                                {getEmployeeNameById(v.employeeId)}
+                                {getEmployeeNameById(v.employeeId)} <span className="text-sm text-muted-foreground">— {employees.find(e => e.id === v.employeeId)?.position}</span>
                               </p>
                             </Link>
                             <p className="text-sm text-muted-foreground">
@@ -713,7 +713,7 @@ export default function Dashboard() {
                         >
                           <div className="flex-1">
                             <p className="font-medium">
-                              {getEmployeeNameById(l.employeeId)}
+                              {getEmployeeNameById(l.employeeId)} <span className="text-sm text-muted-foreground">— {employees.find(e => e.id === l.employeeId)?.position}</span>
                             </p>
                             <p className="text-sm text-muted-foreground">
                               {formatDate(l.startDate)} até{" "}
