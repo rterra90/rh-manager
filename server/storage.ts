@@ -136,18 +136,26 @@ export class MemStorage implements IStorage {
   async deleteEmployee(id: string): Promise<boolean> {
     const deleted = this.employees.delete(id);
     if (deleted) {
-      for (const [hId, h] of this.hoursBank) {
-        if (h.employeeId === id) this.hoursBank.delete(hId);
-      }
-      for (const [vId, v] of this.vacations) {
-        if (v.employeeId === id) this.vacations.delete(vId);
-      }
-      for (const [lId, l] of this.leaves) {
-        if (l.employeeId === id) this.leaves.delete(lId);
-      }
-      for (const [dId, d] of this.paidDaysOff) {
-        if (d.employeeId === id) this.paidDaysOff.delete(dId);
-      }
+      // Collect IDs first, then delete to avoid issues with iterating while deleting
+      const hoursBankIds = Array.from(this.hoursBank.entries())
+        .filter(([, h]) => h.employeeId === id)
+        .map(([hId]) => hId);
+      hoursBankIds.forEach(hId => this.hoursBank.delete(hId));
+
+      const vacationIds = Array.from(this.vacations.entries())
+        .filter(([, v]) => v.employeeId === id)
+        .map(([vId]) => vId);
+      vacationIds.forEach(vId => this.vacations.delete(vId));
+
+      const leaveIds = Array.from(this.leaves.entries())
+        .filter(([, l]) => l.employeeId === id)
+        .map(([lId]) => lId);
+      leaveIds.forEach(lId => this.leaves.delete(lId));
+
+      const paidDaysOffIds = Array.from(this.paidDaysOff.entries())
+        .filter(([, d]) => d.employeeId === id)
+        .map(([dId]) => dId);
+      paidDaysOffIds.forEach(dId => this.paidDaysOff.delete(dId));
     }
     return deleted;
   }
