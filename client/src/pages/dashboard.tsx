@@ -301,11 +301,11 @@ export default function Dashboard() {
     }));
 
   const pendingVacations = vacations.filter(
-    (v) => v.status === "pending",
+    (v) => v.status === "pending" && !isDateRangeActive(v.startDate, v.endDate),
   ).length;
-  const pendingLeaves = leaves.filter((l) => l.status === "pending").length;
+  const pendingLeaves = leaves.filter((l) => l.status === "pending" && !isDateRangeActive(l.startDate, l.endDate)).length;
   const upcomingVacations = vacations
-    .filter((v) => isDateInNext3Months(v.startDate))
+    .filter((v) => isDateInNext3Months(v.startDate) && !isDateRangeActive(v.startDate, v.endDate))
     .sort(
       (a, b) =>
         new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
@@ -653,6 +653,9 @@ export default function Dashboard() {
                             )}
                           </div>
                           <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
+                              Férias
+                            </Badge>
                             <Badge
                               variant={
                                 v.status === "pending"
@@ -724,6 +727,9 @@ export default function Dashboard() {
                             )}
                           </div>
                           <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800">
+                              Licença-Prêmio
+                            </Badge>
                             <Badge
                               variant={
                                 l.status === "pending"
