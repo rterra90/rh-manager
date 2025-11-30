@@ -1,12 +1,22 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { useState } from 'react';
-import { Users, Plus, Search, Eye, Pencil, Trash2, Filter } from 'lucide-react';
+import {
+  Users,
+  Plus,
+  Search,
+  Eye,
+  Pencil,
+  Trash2,
+  Filter,
+  Loader2,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -68,6 +78,10 @@ export default function EmployeesList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [hoursFilter, setHoursFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('name');
+  const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(
+    new Set(),
+  );
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const { toast } = useToast();
 
   const { data: employees = [], isLoading: loadingEmployees } = useQuery<
@@ -99,6 +113,34 @@ export default function EmployeesList() {
       toast({
         title: 'Erro',
         description: 'Não foi possível remover o funcionário.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const promises = ids.map((id) =>
+        apiRequest('DELETE', `/api/employees/${id}`),
+      );
+      await Promise.all(promises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hours-bank'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/vacations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/leaves'] });
+      setSelectedEmployees(new Set());
+      setShowBulkDeleteDialog(false);
+      toast({
+        title: 'Funcionários removidos',
+        description: `${selectedEmployees.size} funcionário(s) removido(s) com sucesso.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível remover alguns funcionários.',
         variant: 'destructive',
       });
     },
@@ -144,6 +186,24 @@ export default function EmployeesList() {
       }
       return 0;
     });
+
+  const toggleSelectAll = () => {
+    if (selectedEmployees.size === filteredEmployees.length) {
+      setSelectedEmployees(new Set());
+    } else {
+      setSelectedEmployees(new Set(filteredEmployees.map((e) => e.id)));
+    }
+  };
+
+  const toggleSelectEmployee = (id: string) => {
+    const newSelected = new Set(selectedEmployees);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedEmployees(newSelected);
+  };
 
   return (
     <div className="space-y-6">
@@ -245,133 +305,228 @@ export default function EmployeesList() {
               )}
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome Completo</TableHead>
-                    <TableHead>Matrícula</TableHead>
-                    <TableHead>Cargo</TableHead>
-                    <TableHead className="text-center">
-                      Banco de Horas
-                    </TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredEmployees.map((employee) => {
-                    const hoursBalance = getEmployeeHoursBalance(employee.id);
-                    return (
-                      <TableRow
-                        key={employee.id}
-                        data-testid={`row-employee-${employee.id}`}
+            <div className="space-y-4">
+              {selectedEmployees.size > 0 && (
+                <AlertDialog
+                  open={showBulkDeleteDialog}
+                  onOpenChange={setShowBulkDeleteDialog}
+                >
+                  <div className="flex items-center justify-between bg-muted p-4 rounded-lg">
+                    <p className="text-sm font-medium">
+                      {selectedEmployees.size} funcionário
+                      {selectedEmployees.size > 1 ? 's' : ''} selecionado
+                      {selectedEmployees.size > 1 ? 's' : ''}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedEmployees(new Set())}
+                        data-testid="button-cancel-bulk-delete"
                       >
-                        <TableCell className="font-medium">
-                          <Link
-                            href={`/employees/${employee.id}`}
-                            className="hover:underline"
-                            data-testid={`link-employee-${employee.id}`}
-                          >
-                            {employee.fullName}
-                          </Link>
-                        </TableCell>
-                        <TableCell>{employee.registrationNumber}</TableCell>
-                        <TableCell>{employee.position}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant={
-                              hoursBalance < 0
-                                ? 'destructive'
-                                : hoursBalance > 0
-                                ? 'default'
-                                : 'secondary'
-                            }
-                          >
-                            {hoursBalance > 0 ? '+' : ''}
-                            {minutesToHHMM(hoursBalance)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Link href={`/employees/${employee.id}`}>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    data-testid={`button-view-${employee.id}`}
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                </Link>
-                              </TooltipTrigger>
-                              <TooltipContent>Ver detalhes</TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Link href={`/employees/${employee.id}/edit`}>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    data-testid={`button-edit-${employee.id}`}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                </Link>
-                              </TooltipTrigger>
-                              <TooltipContent>Editar</TooltipContent>
-                            </Tooltip>
-                            <AlertDialog>
+                        Cancelar
+                      </Button>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          data-testid="button-start-bulk-delete"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Remover Selecionados
+                        </Button>
+                      </AlertDialogTrigger>
+                    </div>
+                  </div>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Remover Funcionários</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja remover {selectedEmployees.size}{' '}
+                        funcionário{selectedEmployees.size > 1 ? 's' : ''}? Esta
+                        ação não pode ser desfeita e todos os dados relacionados
+                        serão perdidos.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() =>
+                          bulkDeleteMutation.mutate(
+                            Array.from(selectedEmployees),
+                          )
+                        }
+                        disabled={bulkDeleteMutation.isPending}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        data-testid="button-confirm-bulk-delete"
+                      >
+                        {bulkDeleteMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Removendo...
+                          </>
+                        ) : (
+                          'Remover'
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={
+                            selectedEmployees.size ===
+                              filteredEmployees.length &&
+                            filteredEmployees.length > 0
+                          }
+                          indeterminate={
+                            selectedEmployees.size > 0 &&
+                            selectedEmployees.size < filteredEmployees.length
+                          }
+                          onCheckedChange={toggleSelectAll}
+                          data-testid="checkbox-select-all"
+                        />
+                      </TableHead>
+                      <TableHead>Nome Completo</TableHead>
+                      <TableHead>Matrícula</TableHead>
+                      <TableHead>Cargo</TableHead>
+                      <TableHead className="text-center">
+                        Banco de Horas
+                      </TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredEmployees.map((employee) => {
+                      const hoursBalance = getEmployeeHoursBalance(employee.id);
+                      const isSelected = selectedEmployees.has(employee.id);
+                      return (
+                        <TableRow
+                          key={employee.id}
+                          data-testid={`row-employee-${employee.id}`}
+                          className={isSelected ? 'bg-muted' : ''}
+                        >
+                          <TableCell className="w-12">
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() =>
+                                toggleSelectEmployee(employee.id)
+                              }
+                              data-testid={`checkbox-employee-${employee.id}`}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <Link
+                              href={`/employees/${employee.id}`}
+                              className="hover:underline"
+                              data-testid={`link-employee-${employee.id}`}
+                            >
+                              {employee.fullName}
+                            </Link>
+                          </TableCell>
+                          <TableCell>{employee.registrationNumber}</TableCell>
+                          <TableCell>{employee.position}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge
+                              variant={
+                                hoursBalance < 0
+                                  ? 'destructive'
+                                  : hoursBalance > 0
+                                  ? 'default'
+                                  : 'secondary'
+                              }
+                            >
+                              {hoursBalance > 0 ? '+' : ''}
+                              {minutesToHHMM(hoursBalance)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <AlertDialogTrigger asChild>
+                                  <Link href={`/employees/${employee.id}`}>
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="text-destructive hover:text-destructive"
-                                      data-testid={`button-delete-${employee.id}`}
+                                      data-testid={`button-view-${employee.id}`}
                                     >
-                                      <Trash2 className="h-4 w-4" />
+                                      <Eye className="h-4 w-4" />
                                     </Button>
-                                  </AlertDialogTrigger>
+                                  </Link>
                                 </TooltipTrigger>
-                                <TooltipContent>Remover</TooltipContent>
+                                <TooltipContent>Ver detalhes</TooltipContent>
                               </Tooltip>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>
-                                    Remover Funcionário
-                                  </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Tem certeza que deseja remover{' '}
-                                    <strong>{employee.fullName}</strong>? Esta
-                                    ação não pode ser desfeita e todos os dados
-                                    relacionados serão perdidos.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>
-                                    Cancelar
-                                  </AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() =>
-                                      deleteMutation.mutate(employee.id)
-                                    }
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    data-testid={`button-confirm-delete-${employee.id}`}
-                                  >
-                                    Remover
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Link href={`/employees/${employee.id}/edit`}>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      data-testid={`button-edit-${employee.id}`}
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                  </Link>
+                                </TooltipTrigger>
+                                <TooltipContent>Editar</TooltipContent>
+                              </Tooltip>
+                              <AlertDialog>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-destructive hover:text-destructive"
+                                        data-testid={`button-delete-${employee.id}`}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Remover</TooltipContent>
+                                </Tooltip>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Remover Funcionário
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Tem certeza que deseja remover{' '}
+                                      <strong>{employee.fullName}</strong>? Esta
+                                      ação não pode ser desfeita e todos os
+                                      dados relacionados serão perdidos.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancelar
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() =>
+                                        deleteMutation.mutate(employee.id)
+                                      }
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      data-testid={`button-confirm-delete-${employee.id}`}
+                                    >
+                                      Remover
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           )}
         </CardContent>

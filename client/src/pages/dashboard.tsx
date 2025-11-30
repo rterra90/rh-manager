@@ -148,8 +148,7 @@ function EmployeeTableSkeleton() {
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedSections, setExpandedSections] = useState({
-    onVacation: true,
-    upcomingVacations: true,
+    vacationsAndLeaves: true,
     paidDaysOff: true,
     employees: true,
   });
@@ -553,111 +552,91 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {employeesOnVacation.length > 0 && (
+      {(employeesOnVacation.length > 0 ||
+        upcomingVacations.length > 0 ||
+        upcomingLeaves.length > 0) && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-2">
-              <CardTitle>Funcionários em Férias/Licença Hoje</CardTitle>
+              <CardTitle>Férias e Licença prêmio</CardTitle>
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => toggleSection('onVacation')}
-                data-testid="button-toggle-on-vacation"
+                onClick={() => toggleSection('vacationsAndLeaves')}
+                data-testid="button-toggle-vacations-leaves"
                 className="h-6 w-6"
               >
                 <ChevronDown
                   className={`h-4 w-4 transition-transform ${
-                    expandedSections.onVacation ? '' : '-rotate-90'
+                    expandedSections.vacationsAndLeaves ? '' : '-rotate-90'
                   }`}
                 />
               </Button>
             </div>
           </CardHeader>
-          {expandedSections.onVacation ? (
+          {expandedSections.vacationsAndLeaves ? (
             <CardContent>
-              <div className="space-y-2">
-                {employeesOnVacation.map(({ employee, periods }) => (
-                  <div
-                    key={employee.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
-                    data-testid={`card-on-vacation-${employee.id}`}
-                  >
-                    <div className="flex-1">
-                      <Link href={`/employees/${employee.id}`}>
-                        <p className="font-medium text-primary hover:underline cursor-pointer">
-                          {employee.fullName}
-                        </p>
-                      </Link>
-                      <p className="text-sm text-muted-foreground">
-                        {periods
-                          .map((p) =>
-                            p.type === 'vacation' ? 'Férias' : 'Licença-Prêmio',
-                          )
-                          .join(' + ')}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Término:{' '}
-                        <span className="font-medium">
-                          {formatDate(periods[0].endDate)}
-                        </span>
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      {periods.map((p) => (
-                        <Badge
-                          key={p.id}
-                          variant={
-                            p.status === 'pending' ? 'outline' : 'default'
-                          }
-                        >
-                          {p.status === 'pending' ? 'Pendente' : 'Aprovado'}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          ) : (
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                {employeesOnVacation.length} funcionário
-                {employeesOnVacation.length > 1 ? 's' : ''} em férias/licença
-                hoje
-              </p>
-            </CardContent>
-          )}
-        </Card>
-      )}
-
-      {(upcomingVacations.length > 0 || upcomingLeaves.length > 0) && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle>Férias e Licenças Próximos 3 Meses</CardTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => toggleSection('upcomingVacations')}
-                data-testid="button-toggle-upcoming-vacations"
-                className="h-6 w-6"
-              >
-                <ChevronDown
-                  className={`h-4 w-4 transition-transform ${
-                    expandedSections.upcomingVacations ? '' : '-rotate-90'
-                  }`}
-                />
-              </Button>
-            </div>
-          </CardHeader>
-          {expandedSections.upcomingVacations ? (
-            <CardContent>
-              <div className="space-y-4">
-                {upcomingVacations.length > 0 && (
+              <div className="space-y-6">
+                {employeesOnVacation.length > 0 && (
                   <div>
                     <h3 className="font-semibold mb-3 flex items-center gap-2">
                       <Palmtree className="h-4 w-4" />
-                      Férias Programadas
+                      Hoje
+                    </h3>
+                    <div className="space-y-2">
+                      {employeesOnVacation.map(({ employee, periods }) => (
+                        <div
+                          key={employee.id}
+                          className="flex items-center justify-between p-3 border rounded-lg"
+                          data-testid={`card-on-vacation-${employee.id}`}
+                        >
+                          <div className="flex-1">
+                            <Link href={`/employees/${employee.id}`}>
+                              <p className="font-medium text-primary hover:underline cursor-pointer">
+                                {employee.fullName}
+                              </p>
+                            </Link>
+                            <p className="text-sm text-muted-foreground">
+                              {periods
+                                .map((p) =>
+                                  p.type === 'vacation'
+                                    ? 'Férias'
+                                    : 'Licença-Prêmio',
+                                )
+                                .join(' + ')}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Término:{' '}
+                              <span className="font-medium">
+                                {formatDate(periods[0].endDate)}
+                              </span>
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            {periods.map((p) => (
+                              <Badge
+                                key={p.id}
+                                variant={
+                                  p.status === 'pending' ? 'outline' : 'default'
+                                }
+                              >
+                                {p.status === 'pending'
+                                  ? 'Pendente'
+                                  : 'Aprovado'}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(upcomingVacations.length > 0 ||
+                  upcomingLeaves.length > 0) && (
+                  <div>
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <Palmtree className="h-4 w-4" />
+                      Próximos 3 Meses
                     </h3>
                     <div className="space-y-2">
                       {upcomingVacations.map((v) => (
@@ -731,16 +710,6 @@ export default function Dashboard() {
                           </div>
                         </div>
                       ))}
-                    </div>
-                  </div>
-                )}
-                {upcomingLeaves.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold mb-3 flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4" />
-                      Licenças Prêmio Programadas
-                    </h3>
-                    <div className="space-y-2">
                       {upcomingLeaves.map((l) => (
                         <div
                           key={l.id}
@@ -820,68 +789,9 @@ export default function Dashboard() {
           ) : (
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                {upcomingVacations.length + upcomingLeaves.length} período
-                {upcomingVacations.length + upcomingLeaves.length > 1
-                  ? 's'
-                  : ''}{' '}
-                agendado
-                {upcomingVacations.length + upcomingLeaves.length > 1
-                  ? 's'
-                  : ''}{' '}
-                •
-                <span className="font-medium ml-1">
-                  {vacations.filter(
-                    (v) =>
-                      isDateInNext3Months(v.startDate) &&
-                      v.status === 'approved',
-                  ).length +
-                    leaves.filter(
-                      (l) =>
-                        isDateInNext3Months(l.startDate) &&
-                        l.status === 'approved',
-                    ).length}{' '}
-                  aprovado
-                  {vacations.filter(
-                    (v) =>
-                      isDateInNext3Months(v.startDate) &&
-                      v.status === 'approved',
-                  ).length +
-                    leaves.filter(
-                      (l) =>
-                        isDateInNext3Months(l.startDate) &&
-                        l.status === 'approved',
-                    ).length >
-                  1
-                    ? 's'
-                    : ''}
-                </span>{' '}
-                •
-                <span className="font-medium ml-1">
-                  {vacations.filter(
-                    (v) =>
-                      isDateInNext3Months(v.startDate) &&
-                      v.status === 'pending',
-                  ).length +
-                    leaves.filter(
-                      (l) =>
-                        isDateInNext3Months(l.startDate) &&
-                        l.status === 'pending',
-                    ).length}{' '}
-                  pendente
-                  {vacations.filter(
-                    (v) =>
-                      isDateInNext3Months(v.startDate) &&
-                      v.status === 'pending',
-                  ).length +
-                    leaves.filter(
-                      (l) =>
-                        isDateInNext3Months(l.startDate) &&
-                        l.status === 'pending',
-                    ).length >
-                  1
-                    ? 's'
-                    : ''}
-                </span>
+                {employeesOnVacation.length} hoje •{' '}
+                {upcomingVacations.length + upcomingLeaves.length} próximos 3
+                meses
               </p>
             </CardContent>
           )}
