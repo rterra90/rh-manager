@@ -158,45 +158,35 @@ function hhmmToMinutes(hhmmStr: string): number {
   return isNegative ? -totalMinutes : totalMinutes;
 }
 
-function maskHHMMInput(
-  value: string,
-  allowNegative: boolean = false
-): { formatted: string; cursorPos: number } {
-  if (!value) return { formatted: "", cursorPos: 0 };
+function maskHHMMInput(value: string, allowNegative: boolean = false): string {
+  if (!value) return "";
 
   const isNegative = value.startsWith("-");
-  const sign = isNegative ? "-" : "";
-  const cleanStr = value.replace(/[^\d:]/g, "").replace(/^:+/, "");
-
-  if (!cleanStr) return { formatted: sign, cursorPos: sign.length };
-
-  const parts = cleanStr.split(":");
-  let formatted = "";
-  let cursorPos = 0;
-
-  if (parts.length === 1) {
-    const digits = parts[0].substring(0, 4);
-    
-    if (digits.length <= 2) {
-      formatted = sign + digits;
-      cursorPos = sign.length + digits.length;
-    } else {
-      const hours = digits.substring(0, digits.length - 2).padStart(2, "0");
-      const mins = digits.substring(digits.length - 2);
-      formatted = sign + hours + ":" + mins;
-      cursorPos = sign.length + hours.length + 1 + mins.length;
-    }
-  } else {
-    const hours = parts[0].padStart(2, "0").substring(0, 2);
-    const mins = parts[1].substring(0, 2).padStart(2, "0");
-    formatted = sign + hours + ":" + mins;
-    cursorPos = sign.length + hours.length + 1 + mins.length;
+  const sign = allowNegative && isNegative ? "-" : "";
+  
+  // Remove tudo exceto dígitos e ":"
+  let cleaned = value.replace(/[^\d:]/g, "");
+  
+  // Se começa com ":", remove
+  if (cleaned.startsWith(":")) {
+    cleaned = cleaned.substring(1);
   }
-
-  return {
-    formatted: allowNegative ? formatted : formatted.replace(/^-/, ""),
-    cursorPos: allowNegative ? cursorPos : Math.max(0, cursorPos - 1),
-  };
+  
+  // Limita a 4 dígitos
+  const digits = cleaned.replace(/:/g, "").substring(0, 4);
+  
+  if (!digits) return sign;
+  
+  // Formata como HH:MM
+  if (digits.length <= 2) {
+    return sign + digits;
+  } else if (digits.length <= 4) {
+    const hh = digits.substring(0, digits.length - 2).padStart(2, "0");
+    const mm = digits.substring(digits.length - 2);
+    return sign + hh + ":" + mm;
+  }
+  
+  return sign;
 }
 
 interface PaidDayOffFormProps {
@@ -208,19 +198,7 @@ function PaidDayOffForm({ employeeId, onSuccess }: PaidDayOffFormProps) {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState("");
   const [hours, setHours] = useState("");
-  const hoursInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-
-  const handleHoursChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { formatted, cursorPos } = maskHHMMInput(e.target.value, false);
-    setHours(formatted);
-    
-    if (hoursInputRef.current) {
-      setTimeout(() => {
-        hoursInputRef.current?.setSelectionRange(cursorPos, cursorPos);
-      }, 0);
-    }
-  };
 
   const mutation = useMutation({
     mutationFn: async (data: { employeeId: string; date: string; hours: number; year: number; initialHours?: number }) => {
@@ -319,12 +297,11 @@ function PaidDayOffForm({ employeeId, onSuccess }: PaidDayOffFormProps) {
               </button>
             </div>
             <Input
-              ref={hoursInputRef}
               id="dayOffHours"
               type="text"
               placeholder="Ex: 08:00"
               value={hours}
-              onChange={handleHoursChange}
+              onChange={(e) => setHours(maskHHMMInput(e.target.value, false))}
               required
               data-testid="input-paid-day-off-hours"
             />
@@ -395,19 +372,7 @@ function HoursBankForm({ employeeId, onSuccess }: HoursBankFormProps) {
   const [year, setYear] = useState(new Date().getFullYear());
   const [hours, setHours] = useState("");
   const [description, setDescription] = useState("");
-  const hoursInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-
-  const handleHoursChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { formatted, cursorPos } = maskHHMMInput(e.target.value, true);
-    setHours(formatted);
-    
-    if (hoursInputRef.current) {
-      setTimeout(() => {
-        hoursInputRef.current?.setSelectionRange(cursorPos, cursorPos);
-      }, 0);
-    }
-  };
 
   const mutation = useMutation({
     mutationFn: async (data: { employeeId: string; month: number; year: number; hours: number; description?: string }) => {
@@ -502,12 +467,11 @@ function HoursBankForm({ employeeId, onSuccess }: HoursBankFormProps) {
           <div className="space-y-2">
             <Label htmlFor="hours">Horas:Minutos (HH:MM)</Label>
             <Input
-              ref={hoursInputRef}
               id="hours"
               type="text"
               placeholder="Ex: 08:30 ou -04:15"
               value={hours}
-              onChange={handleHoursChange}
+              onChange={(e) => setHours(maskHHMMInput(e.target.value, true))}
               required
               data-testid="input-hours"
             />
