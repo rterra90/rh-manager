@@ -1204,13 +1204,6 @@ export default function EmployeeDetail() {
                         <Skeleton key={i} className="h-12 w-full" />
                       ))}
                     </div>
-                  ) : employeePaidDaysOff.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                      <Calendar className="h-10 w-10 text-muted-foreground/50 mb-3" />
-                      <p className="text-sm text-muted-foreground">
-                        Nenhuma folga abonada registrada
-                      </p>
-                    </div>
                   ) : yearsList.length <= 1 ? (
                     // Single year - show without carousel
                     <div className="space-y-6">
@@ -1222,6 +1215,7 @@ export default function EmployeeDetail() {
                         const totalYearHours = yearDaysOff.reduce((sum, d) => sum + d.hours, 0);
                         const initialHours = initialHoursByYear[year] ? hhmmToMinutes(initialHoursByYear[year]) : 0;
                         const balance = initialHours - totalYearHours;
+                        const hasNoData = yearDaysOff.length === 0 && initialHours === 0;
 
                         return (
                           <div key={year} className="space-y-4 p-4 border rounded-lg">
@@ -1250,7 +1244,7 @@ export default function EmployeeDetail() {
                                 </div>
                               </div>
                             </div>
-                            {yearDaysOff.length > 0 && (
+                            {yearDaysOff.length > 0 ? (
                               <div className="rounded-md border">
                                 <Table>
                                   <TableHeader>
@@ -1261,49 +1255,58 @@ export default function EmployeeDetail() {
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {yearDaysOff.map((dayOff) => (
-                                      <TableRow key={dayOff.id} data-testid={`row-paid-day-off-${dayOff.id}`}>
-                                        <TableCell>
-                                          {formatDate(dayOff.date)}
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                          <Badge variant="default">{minutesToHHMM(dayOff.hours)}</Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                          <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="text-destructive hover:text-destructive"
-                                                data-testid={`button-delete-paid-day-off-${dayOff.id}`}
-                                              >
-                                                <Trash2 className="h-4 w-4" />
-                                              </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                              <AlertDialogHeader>
-                                                <AlertDialogTitle>Remover Folga Abonada</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                  Deseja remover esta folga abonada de {minutesToHHMM(dayOff.hours)} em {formatDate(dayOff.date)}?
-                                                </AlertDialogDescription>
-                                              </AlertDialogHeader>
-                                              <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                <AlertDialogAction
-                                                  onClick={() => deletePaidDayOffMutation.mutate(dayOff.id)}
-                                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    {yearDaysOff.length > 0 ? (
+                                      yearDaysOff.map((dayOff) => (
+                                        <TableRow key={dayOff.id} data-testid={`row-paid-day-off-${dayOff.id}`}>
+                                          <TableCell>
+                                            {formatDate(dayOff.date)}
+                                          </TableCell>
+                                          <TableCell className="text-center">
+                                            <Badge variant="default">{minutesToHHMM(dayOff.hours)}</Badge>
+                                          </TableCell>
+                                          <TableCell>
+                                            <AlertDialog>
+                                              <AlertDialogTrigger asChild>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className="text-destructive hover:text-destructive"
+                                                  data-testid={`button-delete-paid-day-off-${dayOff.id}`}
                                                 >
-                                                  Remover
-                                                </AlertDialogAction>
-                                              </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                          </AlertDialog>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
+                                                  <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                              </AlertDialogTrigger>
+                                              <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                  <AlertDialogTitle>Remover Folga Abonada</AlertDialogTitle>
+                                                  <AlertDialogDescription>
+                                                    Deseja remover esta folga abonada de {minutesToHHMM(dayOff.hours)} em {formatDate(dayOff.date)}?
+                                                  </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                  <AlertDialogAction
+                                                    onClick={() => deletePaidDayOffMutation.mutate(dayOff.id)}
+                                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                  >
+                                                    Remover
+                                                  </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                              </AlertDialogContent>
+                                            </AlertDialog>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))
+                                    ) : null}
                                   </TableBody>
                                 </Table>
+                              </div>
+                            ) : hasNoData && (
+                              <div className="flex flex-col items-center justify-center py-8 text-center">
+                                <Calendar className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                                <p className="text-sm text-muted-foreground">
+                                  Nenhuma folga abonada registrada
+                                </p>
                               </div>
                             )}
                           </div>
