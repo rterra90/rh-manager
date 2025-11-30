@@ -219,9 +219,36 @@ export class SqliteStorage implements IStorage {
   }
 
   async deleteEmployee(id: string): Promise<boolean> {
+    // <<<<<<< HEAD
     const db = await initDB();
     const result = await db.run('DELETE FROM employees WHERE id = ?', [id]);
     return result.changes > 0;
+    // =======
+    //     const deleted = this.employees.delete(id);
+    //     if (deleted) {
+    //       // Collect IDs first, then delete to avoid issues with iterating while deleting
+    //       const hoursBankIds = Array.from(this.hoursBank.entries())
+    //         .filter(([, h]) => h.employeeId === id)
+    //         .map(([hId]) => hId);
+    //       hoursBankIds.forEach(hId => this.hoursBank.delete(hId));
+
+    //       const vacationIds = Array.from(this.vacations.entries())
+    //         .filter(([, v]) => v.employeeId === id)
+    //         .map(([vId]) => vId);
+    //       vacationIds.forEach(vId => this.vacations.delete(vId));
+
+    //       const leaveIds = Array.from(this.leaves.entries())
+    //         .filter(([, l]) => l.employeeId === id)
+    //         .map(([lId]) => lId);
+    //       leaveIds.forEach(lId => this.leaves.delete(lId));
+
+    //       const paidDaysOffIds = Array.from(this.paidDaysOff.entries())
+    //         .filter(([, d]) => d.employeeId === id)
+    //         .map(([dId]) => dId);
+    //       paidDaysOffIds.forEach(dId => this.paidDaysOff.delete(dId));
+    //     }
+    //     return deleted;
+    // >>>>>>> 099ec7f2262f67f200509780ab719f404cd0dfcf
   }
 
   // HOURS BANK

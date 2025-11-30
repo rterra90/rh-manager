@@ -691,6 +691,23 @@ export default function EmployeeDetail() {
     },
   });
 
+  const deleteAllHoursMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map(id => apiRequest("DELETE", `/api/hours-bank/${id}`)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hours-bank"] });
+      toast({ title: "Todos os lançamentos removidos" });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover os lançamentos.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const deleteVacationMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await apiRequest("DELETE", `/api/vacations/${id}`);
@@ -922,7 +939,48 @@ export default function EmployeeDetail() {
                     <CardTitle className="text-lg">Banco de Horas</CardTitle>
                     <CardDescription>Histórico de lançamentos mensais</CardDescription>
                   </div>
-                  <HoursBankForm employeeId={employee.id} onSuccess={() => {}} />
+                  <div className="flex gap-2">
+                    {employeeHours.length > 0 && totalHours === 0 && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            data-testid="button-clear-all-hours"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Limpar Saldo
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remover Todos os Lançamentos</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Você tem certeza que deseja remover todos os {employeeHours.length} lançamento{employeeHours.length > 1 ? 's' : ''} de banco de horas? Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteAllHoursMutation.mutate(employeeHours.map(h => h.id))}
+                              disabled={deleteAllHoursMutation.isPending}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              {deleteAllHoursMutation.isPending ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Removendo...
+                                </>
+                              ) : (
+                                "Remover"
+                              )}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                    <HoursBankForm employeeId={employee.id} onSuccess={() => {}} />
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {loadingHours ? (
