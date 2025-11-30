@@ -158,6 +158,33 @@ function hhmmToMinutes(hhmmStr: string): number {
   return isNegative ? -totalMinutes : totalMinutes;
 }
 
+function formatHHMM(value: string, allowNegative: boolean = false): string {
+  if (!value) return "";
+  
+  const isNegative = value.startsWith("-");
+  const cleanValue = value.replace(/[^\d:]/g, "");
+  const parts = cleanValue.split(":");
+  
+  if (parts.length === 1) {
+    const digits = parts[0];
+    if (digits.length <= 2) {
+      return isNegative && allowNegative ? "-" + digits : digits;
+    } else if (digits.length <= 4) {
+      const h = digits.substring(0, digits.length - 2) || "0";
+      const m = digits.substring(digits.length - 2).padStart(2, "0");
+      const result = h.padStart(2, "0") + ":" + m;
+      return isNegative && allowNegative ? "-" + result : result;
+    }
+  } else if (parts.length >= 2) {
+    const h = parts[0].padStart(2, "0");
+    const m = parts[1].substring(0, 2).padStart(2, "0");
+    const result = h + ":" + m;
+    return isNegative && allowNegative ? "-" + result : result;
+  }
+  
+  return isNegative && allowNegative ? "-" + cleanValue : cleanValue;
+}
+
 interface PaidDayOffFormProps {
   employeeId: string;
   onSuccess: () => void;
@@ -239,12 +266,38 @@ function PaidDayOffForm({ employeeId, onSuccess }: PaidDayOffFormProps) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="dayOffHours">Horas:Minutos (HH:MM)</Label>
+            <div className="flex gap-2 mb-2">
+              <button
+                type="button"
+                onClick={() => setHours("06:00")}
+                className="px-3 py-1 text-sm bg-muted rounded-full hover:bg-muted/80 transition-colors"
+                data-testid="button-quick-fill-0600"
+              >
+                06:00
+              </button>
+              <button
+                type="button"
+                onClick={() => setHours("09:00")}
+                className="px-3 py-1 text-sm bg-muted rounded-full hover:bg-muted/80 transition-colors"
+                data-testid="button-quick-fill-0900"
+              >
+                09:00
+              </button>
+              <button
+                type="button"
+                onClick={() => setHours("07:12")}
+                className="px-3 py-1 text-sm bg-muted rounded-full hover:bg-muted/80 transition-colors"
+                data-testid="button-quick-fill-0712"
+              >
+                7:12
+              </button>
+            </div>
             <Input
               id="dayOffHours"
               type="text"
               placeholder="Ex: 08:00"
               value={hours}
-              onChange={(e) => setHours(e.target.value)}
+              onChange={(e) => setHours(formatHHMM(e.target.value, false))}
               required
               data-testid="input-paid-day-off-hours"
             />
@@ -412,9 +465,9 @@ function HoursBankForm({ employeeId, onSuccess }: HoursBankFormProps) {
             <Input
               id="hours"
               type="text"
-              placeholder="Ex: 08:30 ou -04:15 (aceita: 0830, 830, -0330, etc)"
+              placeholder="Ex: 08:30 ou -04:15"
               value={hours}
-              onChange={(e) => setHours(e.target.value)}
+              onChange={(e) => setHours(formatHHMM(e.target.value, true))}
               required
               data-testid="input-hours"
             />
@@ -456,7 +509,7 @@ interface PeriodFormProps {
 function PeriodForm({ employeeId, type, onSuccess }: PeriodFormProps) {
   const [open, setOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
-  const [periodDays, setPeriodDays] = useState("15");
+  const [periodDays, setPeriodDays] = useState(type === "leave" ? "30" : "15");
   const [notes, setNotes] = useState("");
   const { toast } = useToast();
 
@@ -485,7 +538,7 @@ function PeriodForm({ employeeId, type, onSuccess }: PeriodFormProps) {
       });
       setOpen(false);
       setStartDate("");
-      setPeriodDays("15");
+      setPeriodDays(type === "leave" ? "30" : "15");
       setNotes("");
       onSuccess();
     },
@@ -525,7 +578,7 @@ function PeriodForm({ employeeId, type, onSuccess }: PeriodFormProps) {
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className={type === "leave" ? "" : "grid grid-cols-2 gap-4"}>
             <div className="space-y-2">
               <Label htmlFor="startDate">Data Início</Label>
               <Input
@@ -537,18 +590,20 @@ function PeriodForm({ employeeId, type, onSuccess }: PeriodFormProps) {
                 data-testid="input-start-date"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="periodDays">Período</Label>
-              <Select value={periodDays} onValueChange={setPeriodDays}>
-                <SelectTrigger data-testid="select-period-days">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="15">15 dias</SelectItem>
-                  <SelectItem value="30">30 dias</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {type === "vacation" && (
+              <div className="space-y-2">
+                <Label htmlFor="periodDays">Período</Label>
+                <Select value={periodDays} onValueChange={setPeriodDays}>
+                  <SelectTrigger data-testid="select-period-days">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">15 dias</SelectItem>
+                    <SelectItem value="30">30 dias</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           {startDate && (
             <div className="p-3 bg-muted rounded-md text-sm">
