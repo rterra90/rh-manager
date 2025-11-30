@@ -241,7 +241,6 @@ export class SqliteStorage implements IStorage {
   }
 
   async createHoursBank(entry: InsertHoursBank): Promise<HoursBank> {
-    console.log('chamou createHoursBank em storage.ts');
     const db = await initDB();
     const id = randomUUID();
     await db.run(

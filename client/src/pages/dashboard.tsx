@@ -612,7 +612,7 @@ export default function Dashboard() {
                               </span>
                             </p>
                           </div>
-                          <div className="flex gap-2">
+                          {/* <div className="flex gap-2">
                             {periods.map((p) => (
                               <Badge
                                 key={p.id}
@@ -625,7 +625,7 @@ export default function Dashboard() {
                                   : 'Aprovado'}
                               </Badge>
                             ))}
-                          </div>
+                          </div> */}
                         </div>
                       ))}
                     </div>
@@ -646,9 +646,11 @@ export default function Dashboard() {
                           data-testid={`card-vacation-${v.id}`}
                         >
                           <div className="flex-1">
-                            <p className="font-medium">
-                              {getEmployeeNameById(v.employeeId)}
-                            </p>
+                            <Link href={`/employees/${v.employeeId}`}>
+                              <p className="font-medium">
+                                {getEmployeeNameById(v.employeeId)}
+                              </p>
+                            </Link>
                             <p className="text-sm text-muted-foreground">
                               {formatDate(v.startDate)} até{' '}
                               {formatDate(v.endDate)}

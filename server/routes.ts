@@ -217,7 +217,7 @@ export async function registerRoutes(
       }
 
       const employee = await storage.getEmployee(parsed.data.employeeId);
-      console.log(employee);
+
       if (!employee) {
         return res.status(400).json({ message: 'Funcionário não encontrado' });
       }
