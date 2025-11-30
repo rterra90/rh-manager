@@ -1,6 +1,6 @@
 import { useRoute, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -158,6 +158,14 @@ function hhmmToMinutes(hhmmStr: string): number {
   return isNegative ? -totalMinutes : totalMinutes;
 }
 
+function isValidHHMM(value: string, allowNegative: boolean = false): boolean {
+  if (!value) return false;
+  const pattern = allowNegative ? /^-?\d{1,2}:\d{2}$/ : /^\d{1,2}:\d{2}$/;
+  if (!pattern.test(value)) return false;
+  const [hh, mm] = value.replace(/^-/, "").split(":");
+  return parseInt(mm) < 60;
+}
+
 interface PaidDayOffFormProps {
   employeeId: string;
   onSuccess: () => void;
@@ -197,6 +205,15 @@ function PaidDayOffForm({ employeeId, onSuccess }: PaidDayOffFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!date || !hours) return;
+    
+    if (!isValidHHMM(hours, false)) {
+      toast({
+        title: "Formato inválido",
+        description: "Use o formato HH:MM (ex: 08:00)",
+        variant: "destructive",
+      });
+      return;
+    }
     
     const minutes = hhmmToMinutes(hours);
     if (minutes === 0) return;
@@ -239,10 +256,36 @@ function PaidDayOffForm({ employeeId, onSuccess }: PaidDayOffFormProps) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="dayOffHours">Horas:Minutos (HH:MM)</Label>
+            <div className="flex gap-2 mb-2">
+              <button
+                type="button"
+                onClick={() => setHours("06:00")}
+                className="px-3 py-1 text-sm bg-muted rounded-full hover:bg-muted/80 transition-colors"
+                data-testid="button-quick-fill-0600"
+              >
+                06:00
+              </button>
+              <button
+                type="button"
+                onClick={() => setHours("09:00")}
+                className="px-3 py-1 text-sm bg-muted rounded-full hover:bg-muted/80 transition-colors"
+                data-testid="button-quick-fill-0900"
+              >
+                09:00
+              </button>
+              <button
+                type="button"
+                onClick={() => setHours("07:12")}
+                className="px-3 py-1 text-sm bg-muted rounded-full hover:bg-muted/80 transition-colors"
+                data-testid="button-quick-fill-0712"
+              >
+                7:12
+              </button>
+            </div>
             <Input
               id="dayOffHours"
               type="text"
-              placeholder="Ex: 08:00"
+              placeholder="Ex: 08:00 (formato HH:MM)"
               value={hours}
               onChange={(e) => setHours(e.target.value)}
               required
@@ -344,6 +387,16 @@ function HoursBankForm({ employeeId, onSuccess }: HoursBankFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!isValidHHMM(hours, true)) {
+      toast({
+        title: "Formato inválido",
+        description: "Use o formato HH:MM ou -HH:MM (ex: 08:30 ou -02:15)",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const minutes = hhmmToMinutes(hours);
     if (minutes === 0 && hours !== "0:00" && hours !== "-0:00") return;
 
@@ -412,7 +465,7 @@ function HoursBankForm({ employeeId, onSuccess }: HoursBankFormProps) {
             <Input
               id="hours"
               type="text"
-              placeholder="Ex: 08:30 ou -04:15 (aceita: 0830, 830, -0330, etc)"
+              placeholder="Ex: 08:30 ou -04:15 (formato HH:MM)"
               value={hours}
               onChange={(e) => setHours(e.target.value)}
               required
@@ -456,7 +509,7 @@ interface PeriodFormProps {
 function PeriodForm({ employeeId, type, onSuccess }: PeriodFormProps) {
   const [open, setOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
-  const [periodDays, setPeriodDays] = useState("15");
+  const [periodDays, setPeriodDays] = useState(type === "leave" ? "30" : "15");
   const [notes, setNotes] = useState("");
   const { toast } = useToast();
 
@@ -485,7 +538,7 @@ function PeriodForm({ employeeId, type, onSuccess }: PeriodFormProps) {
       });
       setOpen(false);
       setStartDate("");
-      setPeriodDays("15");
+      setPeriodDays(type === "leave" ? "30" : "15");
       setNotes("");
       onSuccess();
     },
@@ -525,7 +578,7 @@ function PeriodForm({ employeeId, type, onSuccess }: PeriodFormProps) {
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className={type === "leave" ? "" : "grid grid-cols-2 gap-4"}>
             <div className="space-y-2">
               <Label htmlFor="startDate">Data Início</Label>
               <Input
@@ -537,18 +590,20 @@ function PeriodForm({ employeeId, type, onSuccess }: PeriodFormProps) {
                 data-testid="input-start-date"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="periodDays">Período</Label>
-              <Select value={periodDays} onValueChange={setPeriodDays}>
-                <SelectTrigger data-testid="select-period-days">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="15">15 dias</SelectItem>
-                  <SelectItem value="30">30 dias</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {type === "vacation" && (
+              <div className="space-y-2">
+                <Label htmlFor="periodDays">Período</Label>
+                <Select value={periodDays} onValueChange={setPeriodDays}>
+                  <SelectTrigger data-testid="select-period-days">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">15 dias</SelectItem>
+                    <SelectItem value="30">30 dias</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           {startDate && (
             <div className="p-3 bg-muted rounded-md text-sm">
@@ -727,12 +782,18 @@ export default function EmployeeDetail() {
 
   // Year carousel logic
   const yearsList = useMemo(() => {
-    if (employeePaidDaysOff.length === 0) return [];
+    if (employeePaidDaysOff.length === 0) return [currentYear];
     const years = employeePaidDaysOff.map(d => d.year);
     const minYear = Math.min(...years);
     const maxYear = Math.max(...years);
-    return Array.from({ length: maxYear - minYear + 1 }, (_, i) => minYear + i);
-  }, [employeePaidDaysOff]);
+    const allYears = Array.from({ length: maxYear - minYear + 1 }, (_, i) => minYear + i);
+    // Ensure current year is included
+    if (!allYears.includes(currentYear)) {
+      allYears.push(currentYear);
+      allYears.sort((a, b) => a - b);
+    }
+    return allYears;
+  }, [employeePaidDaysOff, currentYear]);
 
   // Initialize carousel to current year
   useEffect(() => {
@@ -1143,13 +1204,6 @@ export default function EmployeeDetail() {
                         <Skeleton key={i} className="h-12 w-full" />
                       ))}
                     </div>
-                  ) : employeePaidDaysOff.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                      <Calendar className="h-10 w-10 text-muted-foreground/50 mb-3" />
-                      <p className="text-sm text-muted-foreground">
-                        Nenhuma folga abonada registrada
-                      </p>
-                    </div>
                   ) : yearsList.length <= 1 ? (
                     // Single year - show without carousel
                     <div className="space-y-6">
@@ -1161,6 +1215,7 @@ export default function EmployeeDetail() {
                         const totalYearHours = yearDaysOff.reduce((sum, d) => sum + d.hours, 0);
                         const initialHours = initialHoursByYear[year] ? hhmmToMinutes(initialHoursByYear[year]) : 0;
                         const balance = initialHours - totalYearHours;
+                        const hasNoData = yearDaysOff.length === 0 && initialHours === 0;
 
                         return (
                           <div key={year} className="space-y-4 p-4 border rounded-lg">
@@ -1189,7 +1244,7 @@ export default function EmployeeDetail() {
                                 </div>
                               </div>
                             </div>
-                            {yearDaysOff.length > 0 && (
+                            {yearDaysOff.length > 0 ? (
                               <div className="rounded-md border">
                                 <Table>
                                   <TableHeader>
@@ -1200,49 +1255,58 @@ export default function EmployeeDetail() {
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {yearDaysOff.map((dayOff) => (
-                                      <TableRow key={dayOff.id} data-testid={`row-paid-day-off-${dayOff.id}`}>
-                                        <TableCell>
-                                          {formatDate(dayOff.date)}
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                          <Badge variant="default">{minutesToHHMM(dayOff.hours)}</Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                          <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="text-destructive hover:text-destructive"
-                                                data-testid={`button-delete-paid-day-off-${dayOff.id}`}
-                                              >
-                                                <Trash2 className="h-4 w-4" />
-                                              </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                              <AlertDialogHeader>
-                                                <AlertDialogTitle>Remover Folga Abonada</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                  Deseja remover esta folga abonada de {minutesToHHMM(dayOff.hours)} em {formatDate(dayOff.date)}?
-                                                </AlertDialogDescription>
-                                              </AlertDialogHeader>
-                                              <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                <AlertDialogAction
-                                                  onClick={() => deletePaidDayOffMutation.mutate(dayOff.id)}
-                                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    {yearDaysOff.length > 0 ? (
+                                      yearDaysOff.map((dayOff) => (
+                                        <TableRow key={dayOff.id} data-testid={`row-paid-day-off-${dayOff.id}`}>
+                                          <TableCell>
+                                            {formatDate(dayOff.date)}
+                                          </TableCell>
+                                          <TableCell className="text-center">
+                                            <Badge variant="default">{minutesToHHMM(dayOff.hours)}</Badge>
+                                          </TableCell>
+                                          <TableCell>
+                                            <AlertDialog>
+                                              <AlertDialogTrigger asChild>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className="text-destructive hover:text-destructive"
+                                                  data-testid={`button-delete-paid-day-off-${dayOff.id}`}
                                                 >
-                                                  Remover
-                                                </AlertDialogAction>
-                                              </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                          </AlertDialog>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
+                                                  <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                              </AlertDialogTrigger>
+                                              <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                  <AlertDialogTitle>Remover Folga Abonada</AlertDialogTitle>
+                                                  <AlertDialogDescription>
+                                                    Deseja remover esta folga abonada de {minutesToHHMM(dayOff.hours)} em {formatDate(dayOff.date)}?
+                                                  </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                  <AlertDialogAction
+                                                    onClick={() => deletePaidDayOffMutation.mutate(dayOff.id)}
+                                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                  >
+                                                    Remover
+                                                  </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                              </AlertDialogContent>
+                                            </AlertDialog>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))
+                                    ) : null}
                                   </TableBody>
                                 </Table>
+                              </div>
+                            ) : hasNoData && (
+                              <div className="flex flex-col items-center justify-center py-8 text-center">
+                                <Calendar className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                                <p className="text-sm text-muted-foreground">
+                                  Nenhuma folga abonada registrada
+                                </p>
                               </div>
                             )}
                           </div>

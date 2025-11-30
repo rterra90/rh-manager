@@ -56,7 +56,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {menuItems.map((item) => {
                 const isActive = location === item.url || 
-                  (item.url !== "/" && location.startsWith(item.url) && item.url !== "/employees/new");
+                  (item.url === "/employees" && location.startsWith("/employees") && !location.startsWith("/employees/new"));
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={isActive}>

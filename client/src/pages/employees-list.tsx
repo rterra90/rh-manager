@@ -377,19 +377,20 @@ export default function EmployeesList() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12">
+                      <TableHead className="w-12 group">
                         <Checkbox
                           checked={
                             selectedEmployees.size ===
                               filteredEmployees.length &&
                             filteredEmployees.length > 0
                           }
-                          indeterminate={
-                            selectedEmployees.size > 0 &&
-                            selectedEmployees.size < filteredEmployees.length
-                          }
                           onCheckedChange={toggleSelectAll}
                           data-testid="checkbox-select-all"
+                          className={`checkbox-header ${
+                            selectedEmployees.size === 0
+                              ? 'opacity-0 group-hover:opacity-40 transition-opacity'
+                              : 'opacity-100'
+                          }`}
                         />
                       </TableHead>
                       <TableHead>Nome Completo</TableHead>
@@ -409,7 +410,7 @@ export default function EmployeesList() {
                         <TableRow
                           key={employee.id}
                           data-testid={`row-employee-${employee.id}`}
-                          className={isSelected ? 'bg-muted' : ''}
+                          className={`group ${isSelected ? 'bg-muted' : ''}`}
                         >
                           <TableCell className="w-12">
                             <Checkbox
@@ -418,6 +419,13 @@ export default function EmployeesList() {
                                 toggleSelectEmployee(employee.id)
                               }
                               data-testid={`checkbox-employee-${employee.id}`}
+                              className={`transition-opacity ${
+                                isSelected
+                                  ? 'opacity-100'
+                                  : selectedEmployees.size === 0
+                                  ? 'opacity-0 group-hover:opacity-40'
+                                  : 'opacity-40'
+                              }`}
                             />
                           </TableCell>
                           <TableCell className="font-medium">
