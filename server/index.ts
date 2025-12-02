@@ -94,7 +94,7 @@ export function log(message: string, source = 'express') {
     // It is the only port that is not firewalled.
     // const port = parseInt(process.env.PORT || '5000', 10);
     const port = process.env.PORT ? Number(process.env.PORT) : 5000;
-    const host = process.env.HOST || 'localhost';
+    const host = process.env.HOST || '0.0.0.0';
 
     httpServer.listen(
       {
